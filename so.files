@@ -279,3 +279,6 @@ simulations/Network-r20.ned
 simulations/BaseNetworkModule.ned
 src/mesh/donet/DonetNode.ned
 src/common/IGenericApp.ned
+src/global/churn/ExpParetoChurnModel.ned
+src/global/churn/ExpParetoChurnModel.h
+src/global/churn/ExpParetoChurnModel.cc
