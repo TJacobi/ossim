@@ -964,10 +964,20 @@ void DonetPeer::handleTimerTimeoutWaitingAccept()
 void DonetPeer::handleTimerReportStatistic()
 {
    //if (m_player->playerStarted() == true)
-   if (simTime().dbl() < simulation.getWarmupPeriod().dbl())
-      return;
+//   if (simTime().dbl() < simulation.getWarmupPeriod().dbl())
+//      return;
 
    reportHitMiss();
+
+   // -- Report End-to-End delays (between two sampling)
+   m_gstat->collectDeltaEndToEndDelay(m_videoBuffer->getDeltaEndToEndDelay());
+
+   // -- Report overlay hop counts (between two sampling)
+   m_gstat->collectDeltaOverlayHopCount(m_videoBuffer->getDeltaOverlayHopCount());
+
+   // -- Report number of received chunks
+   m_gstat->collectDeltaNumberOfReceivedChunk(m_videoBuffer->getDeltaNumberOfReceivedChunk());
+
 }
 
 void DonetPeer::reportHitMiss()
