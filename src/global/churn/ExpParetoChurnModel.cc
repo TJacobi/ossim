@@ -47,11 +47,13 @@ ExpParetoChurnModel::~ExpParetoChurnModel() {
 void ExpParetoChurnModel::initialize()
 {
     // -- Get parameters
-    param_rng       = par("rng");
-    param_a         = par("a");
-    param_b         = par("b");
+    param_rng           = par("rng");
+    param_arrivalRate   = par("arrivalRate");
+    param_a             = par("a");
+    param_b             = par("b");
 
     WATCH(param_rng);
+    WATCH(param_arrivalRate);
     WATCH(param_a);
     WATCH(param_b);
 }
