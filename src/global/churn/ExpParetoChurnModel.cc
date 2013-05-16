@@ -87,10 +87,10 @@ double ExpParetoChurnModel::getSessionDuration()
     //if (param_a <= 0 || param_b <= 0) return -1.0;
     if (param_a <= 0)
        return -1.0;
-    else if (param_b <= 0)
-       return -1.0;
+//    else if (param_b <= 0)
+//       return -1.0;
 
-    m_absoluteInterval = (m_absoluteInterval < 0.0)?simTime().dbl():m_absoluteInterval;
+    m_absoluteInterval = (m_absoluteInterval < 0.0) ? simTime().dbl() : m_absoluteInterval;
 
     // -- Get an interval which follows an exponential distribution with rate param_arrivalRate
     //double deltaT = pareto_shifted(param_a, param_b, 0, param_rng);;
