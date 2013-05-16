@@ -273,7 +273,7 @@ src/underlay/inet/InetUnderlayConfigurator.ned
 src/underlay/inet/InetUnderlayConfigurator.h
 src/underlay/inet/InetUnderlayConfigurator.cc
 simulations/RouterLine.ned
-simulations/GTITM_TS_IPv4Underlay_sd4_ts16_ss16_td4_06_tn5_09_sn5_04_n420_e1212.ned
+simulations/GTITM_e1212.ned
 src/underlay/inet/GtitmRouter.ned
 simulations/Network-r20.ned
 simulations/BaseNetworkModule.ned
