@@ -1,100 +1,93 @@
 //
+// =============================================================================
+// OSSIM : A Generic Simulation Framework for Overlay Streaming
+// =============================================================================
+//
+// (C) Copyright 2012-2013, by Giang Nguyen (P2P, TU Darmstadt) and Contributors
+//
+// Project Info: http://www.p2p.tu-darmstadt.de/research/ossim
+//
+// OSSIM is free software: you can redistribute it and/or modify it under the
+// terms of the GNU General Public License as published by the Free Software
+// Foundation, either version 3 of the License, or (at your option) any later
+// version.
+//
+// OSSIM is distributed in the hope that it will be useful, but WITHOUT ANY
+// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+// A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along with
+// this program. If not, see <http://www.gnu.org/licenses/>.
+//
+// -----------------------------------------------------------------------------
+// GTITM_e1212.ned
+// -----------------------------------------------------------------------------
+// (C) Copyright 2012-2013, by Giang Nguyen (P2P, TU Darmstadt) and Contributors
+//
+// Contributors: Mathias Fischer;
+// Code Reviewers: Giang Nguyen;
+// -----------------------------------------------------------------------------
+//
+
+//
 // OMNeT++ network description -- exported from GT-ITM (alt) topology
 // Generator Model Used:
 //   Model (8 - Imported From format file /home/sdelling/workspace/gtitm-topology-generator/topologies/small_gtitm_ts_spec-0.gtts ): 420 1212 1212.0 transtub 1212.0 0.0 0.0 4.0 4.0 16.0 16.0 16.0 16.0 16.0 4.0 4.0 183.0 183.0 3.0 3.0 0.6 0.6 0.0 0.0 0.0 0.0 0.0 0.0 5.0 5.0 92.0 92.0 3.0 3.0 0.9 0.9 0.0 0.0 0.0 0.0 0.0 0.0 5.0 5.0 52.0 52.0 3.0 3.0 0.4 0.4 0.0 0.0 0.0 0.0 0.0 183.0 2.0 4.0 2.0 
 //
 
-//This file must be placed under p2pstreaming/src/underlay/inetunderlay
-
-//Package
 package so.simulations;
 
 //
 // Prototype for modules that can be used as node in a GTITM_TransitStub_Network
 //
 
-//import p2pstreaming.modules.Statistic.Statistics;
-//import p2pstreaming.modules.Attacker.AttackerModule;
-//import p2pstreaming.modules.Attacker.UnderlayAttacker.UnderlayAttackerModule;
-//import p2pstreaming.modules.CoordinateSystem.CoordinateLoader;
-//import p2pstreaming.modules.Configuration.Configuration;
-//import p2pstreaming.modules.Bootstrap.Bootstrap;
-//import p2pstreaming.modules.ALM_RouterSupport.ARS_RouterManager;
-//import p2pstreaming.modules.Streaming.GlobalStreamTable;
-//import p2pstreaming.underlay.StatisticHost;
-//import p2pstreaming.underlay.StatisticRouter;
-
-//import inet.nodes.inet.Router;
+import so.simulations.BaseNetworkModule;
 import so.underlay.inet.GtitmRouter;
 import so.underlay.inet.InetUnderlayConfigurator;
 
 //
 // GT-ITM TS topology exported via BRITE.
 //
-module GTITM_TS_IPv4Underlay_sd4_ts16_ss16_td4_06_tn5_09_sn5_04_n420_e1212 
+module GTITM_e1212_module extends BaseNetworkModule
 {
 	parameters:
-		int nRouter;
-		int nClient;
+        //int nRouter;
+        int nPeers;
 	submodules:
-//		globalStreamTable: GlobalStreamTable {
-//				@display("p=498,194");
-//		}
-		configurator: InetUnderlayConfigurator {
-			parameters:
-				networkAddress = "141.24.0.0";
-				netmask = "255.255.0.0";
-            clients = nClient;
-				@display("i=block/cogwheel");
-		}
-//		routerManager: ARS_RouterManager {
-//			parameters:
-//				@display("i=block/uparrow");
-//		}
-//		statistics: Statistics {
-//			parameters:
-//				@display("i=block/table");
-//		}
-//		attacker: AttackerModule {
-//			parameters:
-//				@display("i=abstract/people");
-//		}
-//		underlayAttacker: UnderlayAttackerModule {
-//			parameters:
-//				@display("i=abstract/people");
-//		}
-//		coordLoader: CoordinateLoader {
-//			parameters:
-//				@display("i=device/receiverdish");
-//		}
-//		configuration: Configuration {
-//			parameters:
-//				@display("i=block/table");
-//		}
-//		bootstrap: Bootstrap {
-//				parameters:
-//				@display("i=block/table");
-//		}
+        configurator: InetUnderlayConfigurator {
+            parameters:
+                networkAddress = "192.168.0.0";
+                netmask = "255.255.0.0";
+                nPeers = nPeers;
+                @display("i=block/cogwheel");
+        }
 		rt[420]: GtitmRouter {
 				parameters:
 				@display("i=abstract/router");
-				isTransit = (index==0 || index==1 || index==2 || index==63 || index==64 || index==65 || index==66 || index==67 || index==168 || index==169 || index==170 || index==171 || index==172 || index==173 || index==174 || index==175 || index==336 || index==337 || index==338 || index==339 ? true : false);
-		}
+                isTransit = (index==0 || index==1 || index==2 || index==63 || index==64 || index==65 || index==66 || index==67 || index==168 || index==169 || index==170 || index==171 || index==172 || index==173 || index==174 || index==175 || index==336 || index==337 || index==338 || index==339 ? true : false);
+        }
   connections:
 rt[0].pppg$o++ --> { delay = 0.34ms ; datarate = 1.729206919996733E8bps; } --> rt[1].pppg$i++;
 rt[1].pppg$o++ --> { delay = 0.34ms ; datarate = 1.729206919996733E8bps; } --> rt[0].pppg$i++;
+
 rt[0].pppg$o++ --> { delay = 0.1ms ; datarate = 6.840889710560251E8bps; } --> rt[4].pppg$i++;
 rt[4].pppg$o++ --> { delay = 0.1ms ; datarate = 6.840889710560251E8bps; } --> rt[0].pppg$i++;
+
 rt[0].pppg$o++ --> { delay = 0.31ms ; datarate = 4.018382415693768E8bps; } --> rt[10].pppg$i++;
 rt[10].pppg$o++ --> { delay = 0.31ms ; datarate = 4.018382415693768E8bps; } --> rt[0].pppg$i++;
+
 rt[0].pppg$o++ --> { delay = 0.5ms ; datarate = 1.4186692413788205E8bps; } --> rt[12].pppg$i++;
 rt[12].pppg$o++ --> { delay = 0.5ms ; datarate = 1.4186692413788205E8bps; } --> rt[0].pppg$i++;
+
 rt[0].pppg$o++ --> { delay = 0.49ms ; datarate = 1.0270392846275599E9bps; } --> rt[13].pppg$i++;
 rt[13].pppg$o++ --> { delay = 0.49ms ; datarate = 1.0270392846275599E9bps; } --> rt[0].pppg$i++;
+
 rt[0].pppg$o++ --> { delay = 0.26ms ; datarate = 8.67310525388628E8bps; } --> rt[22].pppg$i++;
 rt[22].pppg$o++ --> { delay = 0.26ms ; datarate = 8.67310525388628E8bps; } --> rt[0].pppg$i++;
+
 rt[0].pppg$o++ --> { delay = 0.51ms ; datarate = 3.127103203741591E8bps; } --> rt[27].pppg$i++;
 rt[27].pppg$o++ --> { delay = 0.51ms ; datarate = 3.127103203741591E8bps; } --> rt[0].pppg$i++;
+
 rt[0].pppg$o++ --> { delay = 0.68ms ; datarate = 5.801567735796211E8bps; } --> rt[35].pppg$i++;
 rt[35].pppg$o++ --> { delay = 0.68ms ; datarate = 5.801567735796211E8bps; } --> rt[0].pppg$i++;
 rt[0].pppg$o++ --> { delay = 1.53ms ; datarate = 5.869444967469745E8bps; } --> rt[64].pppg$i++;
@@ -1277,9 +1270,7 @@ rt[418].pppg$o++ --> { delay = 0.35ms ; datarate = 8.767844226018302E8bps; } -->
 rt[419].pppg$o++ --> { delay = 0.35ms ; datarate = 8.767844226018302E8bps; } --> rt[418].pppg$i++;
 }
 
-//
-network GTITM_TS_IPv4Network_sd4_ts16_ss16_td4_06_tn5_09_sn5_04_n420_e1212 extends GTITM_TS_IPv4Underlay_sd4_ts16_ss16_td4_06_tn5_09_sn5_04_n420_e1212 
+network GTITM_e1212 extends GTITM_e1212_module
 {
 	parameters:
 }
-
