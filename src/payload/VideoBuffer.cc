@@ -83,10 +83,19 @@ void VideoBuffer::initialize(int stage)
         elem.m_chunk = NULL;
     }
 
+    // ---------------------- Initialization -----------------------------------
     m_bufferStart_seqNum = m_bufferEnd_seqNum = m_head_received_seqNum = 0L;
 
     m_time_firstChunk = -1.0;
+
     m_nChunkReceived = 0L;
+    m_prev_nChunkReceived = 0L;
+
+    m_totalEndToEndDelay = 0.0L;
+    m_prev_totalEndToEndDelay = 0.0L;
+
+    m_totalOverlayHopCount = 0L;
+    m_prev_totalOverlayHopCount = 0L;
 
     WATCH(m_bufferSize_chunk);
     WATCH(m_chunkInterval);
@@ -104,10 +113,9 @@ void VideoBuffer::initializeRangeVideoBuffer(SEQUENCE_NUMBER_T seq)
    m_bufferEnd_seqNum = m_bufferStart_seqNum + m_bufferSize_chunk - 1;
 }
 
-/*
- * Currently used by the Forwarder
- *
- */
+//
+// Currently used by the Forwarder
+//
 void VideoBuffer::insertPacket(VideoChunkPacket *packet)
 {
     Enter_Method("insertPacket()");
@@ -205,31 +213,52 @@ void VideoBuffer::insertPacket(VideoChunkPacket *packet)
         EV << "  -- head:\t"    << m_head_received_seqNum   << endl;
     }
 
-    // -- To know the status
-    ++m_nChunkReceived;
-    if (m_time_firstChunk < 0)
+//
+// TODO: Might be obsolete (Giang)
+//
+//    // -- To know the status
+//    if (m_time_firstChunk < 0)
+//    {
+//        // This received chunk is the first one received so far
+//        m_time_firstChunk = simTime().dbl();
+//    }
+//    else
+//    {
+//        double delta_time = simTime().dbl() - m_time_firstChunk;
+//        if (delta_time > 0)
+//            EV << "Average received chunk rate: " << (double)m_nChunkReceived / delta_time << endl;
+//        else
+//            throw cException("delta_time is invalid");
+//    }
+
+    // -- Update the hop count variable
+    packet->setOverlayHopCount(packet->getOverlayHopCount() + 1);
+
+    //
+    // Statistic collecting
+    //
+    if (simTime().dbl() >= simulation.getWarmupPeriod().dbl())
     {
-        // This received chunk is the first one received so far
-        m_time_firstChunk = simTime().dbl();
-    }
-    else
-    {
-        double delta_time = simTime().dbl() - m_time_firstChunk;
-        if (delta_time > 0)
-            EV << "Average received chunk rate: " << (double)m_nChunkReceived / delta_time << endl;
-        else
-            throw cException("delta_time is invalid");
+       ++m_nChunkReceived;
+
+       m_totalEndToEndDelay += (simTime().dbl() - packet->getTimeStamp());
+
+       m_totalOverlayHopCount += packet->getOverlayHopCount();
     }
 
 // listening support ->
     std::vector<VideoBufferListener*>::iterator it;
-    for(it = mListeners.begin(); it != mListeners.end(); it++){
+    for(it = mListeners.begin(); it != mListeners.end(); it++)
+    {
         (*it)->onNewChunk(seq_num);
     }
 // <- listening support
 
 }
 
+//
+// Used by the ChunkGenerator module
+//
 void VideoBuffer::insertPacketDirect(VideoChunkPacket *packet)
 {
     Enter_Method("insertPacket()");
@@ -284,6 +313,8 @@ void VideoBuffer::insertPacketDirect(VideoChunkPacket *packet)
 //        else
 //            throw cException("delta_time is invalid");
 //    }
+
+    packet->setOverlayHopCount(0);
 
 // listening support ->
     std::vector<VideoBufferListener*>::iterator it;
@@ -680,7 +711,29 @@ int VideoBuffer::getNumberActiveElement(void)
 //    return count;
 //}
 
+long VideoBuffer::getDeltaNumberOfReceivedChunk()
+{
+   long delta = m_nChunkReceived - m_prev_nChunkReceived;
+   m_prev_nChunkReceived = m_nChunkReceived;
 
+   return delta;
+}
+
+double VideoBuffer::getDeltaEndToEndDelay()
+{
+   double delta = (double) (m_totalEndToEndDelay - m_prev_totalEndToEndDelay);
+   m_prev_totalEndToEndDelay = m_totalEndToEndDelay;
+
+   return delta;
+}
+
+long VideoBuffer::getDeltaOverlayHopCount()
+{
+   long delta = (long)(m_totalOverlayHopCount - m_prev_totalOverlayHopCount);
+   m_prev_totalOverlayHopCount = m_totalOverlayHopCount;
+
+   return delta;
+}
 
 
 // listening support ->
