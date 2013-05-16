@@ -117,6 +117,10 @@ void DonetStatistic::initialize(int stage)
         sig_ci                = registerSignal("Signal_CI");
         sig_systemSize        = registerSignal("Signal_SystemSize");
 
+        // -- Delays
+        sig_endToEndDelay     = registerSignal("Signal_EndToEndDelay");
+        sig_overlayHopCount   = registerSignal("Signal_OverlayHopCount");
+
         // should be obsolete
         sig_chunkSeek       = registerSignal("Signal_ChunkSeek");
 
@@ -186,6 +190,10 @@ void DonetStatistic::initialize(int stage)
     m_count_IGN = 0L;
     m_count_ACK = 0L;
 
+    m_totalEndToEndDelay = 0.0L;
+    m_totalNumberOfReceivedChunk = 0L;
+    m_totalOverlayHopCount = 0L;
+
     // -- data to be processed with R
 //    m_accumulatedSizePV = 0L;
 //    m_totalNode = 0;
@@ -228,6 +236,8 @@ void DonetStatistic::handleTimerMessage(cMessage *msg)
         collectSkipChunk();
         collectStallDuration();
         collectRebuffering();
+
+        reportDelays();
 
         scheduleAt(simTime() + param_interval_reportCI, timer_reportCI);
     }
@@ -556,6 +566,21 @@ void DonetStatistic::reportRebuffering()
     //emit(sig_rebuffering, 1);
     ++m_count_rebuffering;
 }
+
+void DonetStatistic::reportDelays(void)
+{
+   if (m_totalNumberOfReceivedChunk == 0L)
+   {
+      emit(sig_endToEndDelay, -1.0);
+      emit(sig_overlayHopCount, -1L);
+   }
+   else
+   {
+      emit(sig_endToEndDelay, m_totalEndToEndDelay / m_totalNumberOfReceivedChunk);
+      emit(sig_overlayHopCount, (long double)(m_totalOverlayHopCount / m_totalNumberOfReceivedChunk));
+   }
+}
+
 // -------------------------------------------- END OF ON-GOING ----------------
 
 void DonetStatistic::reportMeshJoin()
@@ -586,4 +611,19 @@ void DonetStatistic::reportNumberOfPartner(const IPvXAddress &addr, const int &n
 void DonetStatistic::reportNumberOfJoin(int val)
 {
     emit(sig_nJoin, val);
+}
+
+void DonetStatistic::collectDeltaEndToEndDelay(const double &delta)
+{
+   m_totalEndToEndDelay += delta;
+}
+
+void DonetStatistic::collectDeltaOverlayHopCount(const long &delta)
+{
+   m_totalOverlayHopCount += delta;
+}
+
+void DonetStatistic::collectDeltaNumberOfReceivedChunk(const long &delta)
+{
+   m_totalNumberOfReceivedChunk += delta;
 }
