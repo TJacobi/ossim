@@ -571,8 +571,8 @@ void DonetStatistic::reportDelays(void)
 {
    if (m_totalNumberOfReceivedChunk == 0L)
    {
-      emit(sig_endToEndDelay, -1.0);
-      emit(sig_overlayHopCount, -1L);
+      emit(sig_endToEndDelay, 0.0);
+      emit(sig_overlayHopCount, 0L);
    }
    else
    {
