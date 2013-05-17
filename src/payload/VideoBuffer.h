@@ -123,14 +123,14 @@ public:
 
     // -- Local statistics
     inline long getNumberOfReceivedChunk() { return m_nChunkReceived; }
-    inline long double getTotalEndToEndDelay() { return m_totalEndToEndDelay; }
+    inline long double getTotalDelayOneOverlayHop() { return m_totalDelay_oneOverlayHop; }
     inline double getTotalOverlayHopCount() { return m_totalOverlayHopCount; }
 
     // @brief returns the difference of the number of received chunks between two sampling
     long getDeltaNumberOfReceivedChunk();
 
     // @brief returns the difference of the end-to-end delays between two sampling
-    double getDeltaEndToEndDelay();
+    double getDeltaDelayOneOverlayHop();
 
     // @brief returns the difference of the overlay hop counts between two sampling
     long getDeltaOverlayHopCount();
@@ -174,7 +174,7 @@ private:
     long m_prev_nChunkReceived;
 
     // -- To measure delay (end-to-end or hop count)
-    long double m_totalEndToEndDelay;
+    long double m_totalDelay_oneOverlayHop;
     long double m_prev_totalEndToEndDelay;
 
     long long m_totalOverlayHopCount;

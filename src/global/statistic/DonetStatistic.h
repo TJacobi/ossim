@@ -154,7 +154,7 @@ public:
     void increaseChunkMiss(const int &delta);
 
     // -- To calculate Delay
-    void collectDeltaEndToEndDelay(const double &);
+    void collectDeltaDelayOneOverlayHop(const double &);
     void collectDeltaOverlayHopCount(const long &);
     void collectDeltaNumberOfReceivedChunk(const long &);
     // <--- Currently used
@@ -227,7 +227,7 @@ private:
     simsignal_t sig_systemSize;
 
     // -- Delays
-    simsignal_t sig_endToEndDelay;
+    simsignal_t sig_DelayOneOverlayHop;
     simsignal_t sig_overlayHopCount;
 
     // should be obsolete

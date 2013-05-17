@@ -85,9 +85,11 @@ simple DonetStatistic like IStreamingStatistic
         // To get the number active peers in the system
         @statistic[systemSize](source="Signal_SystemSize"; record=mean,vector);
 
-        @statistic[endToEndDelay](source="Signal_EndToEndDelay"; record=mean,vector);
+        // Delay --->
+        @statistic[delayOneOverlayHop](source="Signal_DelayOneOverlayHop"; record=mean,min,max);
 
-        @statistic[overlayHopCount](source="Signal_OverlayHopCount"; record=mean,vector);
+        @statistic[overlayHopCount](source="Signal_OverlayHopCount"; record=mean,min,max);
+        // <---- Delay
 
         //@statistic[SkipChunk](source="Signal_SkipChunk"; record=last,vector);
 

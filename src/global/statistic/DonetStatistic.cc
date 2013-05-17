@@ -118,7 +118,7 @@ void DonetStatistic::initialize(int stage)
         sig_systemSize        = registerSignal("Signal_SystemSize");
 
         // -- Delays
-        sig_endToEndDelay     = registerSignal("Signal_EndToEndDelay");
+        sig_DelayOneOverlayHop     = registerSignal("Signal_DelayOneOverlayHop");
         sig_overlayHopCount   = registerSignal("Signal_OverlayHopCount");
 
         // should be obsolete
@@ -571,12 +571,12 @@ void DonetStatistic::reportDelays(void)
 {
    if (m_totalNumberOfReceivedChunk == 0L)
    {
-      emit(sig_endToEndDelay, 0.0);
+      emit(sig_DelayOneOverlayHop, 0.0);
       emit(sig_overlayHopCount, 0L);
    }
    else
    {
-      emit(sig_endToEndDelay, m_totalEndToEndDelay / m_totalNumberOfReceivedChunk);
+      emit(sig_DelayOneOverlayHop, m_totalEndToEndDelay / m_totalNumberOfReceivedChunk);
       emit(sig_overlayHopCount, (long double)(m_totalOverlayHopCount / m_totalNumberOfReceivedChunk));
    }
 }
@@ -613,7 +613,7 @@ void DonetStatistic::reportNumberOfJoin(int val)
     emit(sig_nJoin, val);
 }
 
-void DonetStatistic::collectDeltaEndToEndDelay(const double &delta)
+void DonetStatistic::collectDeltaDelayOneOverlayHop(const double &delta)
 {
    m_totalEndToEndDelay += delta;
 }

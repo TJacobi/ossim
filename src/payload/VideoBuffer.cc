@@ -91,7 +91,7 @@ void VideoBuffer::initialize(int stage)
    m_nChunkReceived = 0L;
    m_prev_nChunkReceived = 0L;
 
-   m_totalEndToEndDelay = 0.0L;
+   m_totalDelay_oneOverlayHop = 0.0L;
    m_prev_totalEndToEndDelay = 0.0L;
 
    m_totalOverlayHopCount = 0L;
@@ -247,8 +247,8 @@ void VideoBuffer::insertPacket(VideoChunkPacket *packet)
          << " -- end-to-end delay: " << simTime().dbl() - packet->getSentTimeStamp()
          << " -- hop count: " << packet->getOverlayHopCount()
          << endl;
-      //m_totalEndToEndDelay += (simTime().dbl() - packet->getOriginalTimeStamp());
-      m_totalEndToEndDelay += (simTime().dbl() - packet->getSentTimeStamp());
+      //m_totalDelay_oneOverlayHop += (simTime().dbl() - packet->getOriginalTimeStamp());
+      m_totalDelay_oneOverlayHop += (simTime().dbl() - packet->getSentTimeStamp());
 
       m_totalOverlayHopCount += packet->getOverlayHopCount();
    }
@@ -727,10 +727,10 @@ long VideoBuffer::getDeltaNumberOfReceivedChunk()
    return delta;
 }
 
-double VideoBuffer::getDeltaEndToEndDelay()
+double VideoBuffer::getDeltaDelayOneOverlayHop()
 {
-   double delta = (double) (m_totalEndToEndDelay - m_prev_totalEndToEndDelay);
-   m_prev_totalEndToEndDelay = m_totalEndToEndDelay;
+   double delta = (double) (m_totalDelay_oneOverlayHop - m_prev_totalEndToEndDelay);
+   m_prev_totalEndToEndDelay = m_totalDelay_oneOverlayHop;
 
    return delta;
 }

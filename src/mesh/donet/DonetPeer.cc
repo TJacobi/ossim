@@ -973,7 +973,7 @@ void DonetPeer::handleTimerReportStatistic()
    reportHitMiss();
 
    // -- Report End-to-End delays (between two sampling)
-   m_gstat->collectDeltaEndToEndDelay(m_videoBuffer->getDeltaEndToEndDelay());
+   m_gstat->collectDeltaDelayOneOverlayHop(m_videoBuffer->getDeltaDelayOneOverlayHop());
 
    // -- Report overlay hop counts (between two sampling)
    m_gstat->collectDeltaOverlayHopCount(m_videoBuffer->getDeltaOverlayHopCount());
@@ -985,7 +985,7 @@ void DonetPeer::handleTimerReportStatistic()
    long nChunk = m_videoBuffer->getNumberOfReceivedChunk();
    if (nChunk > 0)
    {
-      emit(sig_e2eDelay, m_videoBuffer->getTotalEndToEndDelay() / nChunk);
+      emit(sig_e2eDelay, m_videoBuffer->getTotalDelayOneOverlayHop() / nChunk);
       emit(sig_overlayHopCount, m_videoBuffer->getTotalOverlayHopCount() / nChunk);
    }
 
