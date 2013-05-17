@@ -303,6 +303,10 @@ private:
 
     simsignal_t sig_nBufferMapReceived;
 
+    // -- Delays measurement
+    simsignal_t sig_e2eDelay;
+    simsignal_t sig_overlayHopCount;
+
 };
 
 #endif // DONETPEER_H_

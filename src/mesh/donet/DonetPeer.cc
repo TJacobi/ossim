@@ -75,6 +75,9 @@ void DonetPeer::initialize(int stage)
 //        sig_maxHead  = registerSignal("Signal_MaxHead");
 //        sig_currentPlaybackPoint = registerSignal("Signal_CurrentPlaybackPoint");
 
+        sig_e2eDelay = registerSignal("Signal_EndToEndDelay");
+        sig_overlayHopCount = registerSignal("Signal_OverlayHopCount");
+
         return;
     }
     if (stage != 3)
@@ -977,6 +980,14 @@ void DonetPeer::handleTimerReportStatistic()
 
    // -- Report number of received chunks
    m_gstat->collectDeltaNumberOfReceivedChunk(m_videoBuffer->getDeltaNumberOfReceivedChunk());
+
+   // -- Local statistics (for debugging)
+   long nChunk = m_videoBuffer->getNumberOfReceivedChunk();
+   if (nChunk > 0)
+   {
+      emit(sig_e2eDelay, m_videoBuffer->getTotalEndToEndDelay() / nChunk);
+      emit(sig_overlayHopCount, m_videoBuffer->getTotalOverlayHopCount() / nChunk);
+   }
 
 }
 

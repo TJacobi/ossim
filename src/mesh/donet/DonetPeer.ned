@@ -134,6 +134,9 @@ simple DonetPeer extends DonetBase
 
     //@statistic[rateBufferMapReceived](source=Signal_nBufferMapReceived; record=mean,vector);
 
+    // -- Delays
+    //@statistic[e2eDelay](source="Signal_EndToEndDelay"; record=mean,vector);
+    //@statistic[overlayHopCount](source="Signal_OverlayHopCount"; record=mean,vector);
 
     // Template::
     //@statistic[n]();
