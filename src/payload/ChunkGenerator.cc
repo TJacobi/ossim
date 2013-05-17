@@ -109,7 +109,7 @@ void ChunkGenerator::handleTimerMessage(cMessage *msg)
 
         VideoChunkPacket *chunk = new VideoChunkPacket("VIDEO_CHUNK_PACKET");
             chunk->setSeqNumber(m_id_newChunk);
-            chunk->setTimeStamp(simTime().dbl());           // Set the time-stamp of the chunk to current time
+            chunk->setOriginalTimeStamp(simTime().dbl());           // Set the time-stamp of the chunk to current time
             chunk->setOverlayHopCount(0);                          // Initialize the hopCount variable
             chunk->setBitLength(m_size_chunkPacket * 8);    // convert the chunk size from Bytes --> bits
 
