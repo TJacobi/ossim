@@ -282,3 +282,11 @@ src/common/IGenericApp.ned
 src/global/churn/ExpParetoChurnModel.ned
 src/global/churn/ExpParetoChurnModel.h
 src/global/churn/ExpParetoChurnModel.cc
+src/global/topology/OverlayTopology.ned
+src/global/topology/TopologyModel.h
+src/global/topology/PPEdge.h
+src/global/topology/PPDatatypes.h
+src/global/topology/OverlayTopology.h
+src/global/topology/TopologyModel.cc
+src/global/topology/PPEdge.cc
+src/global/topology/OverlayTopology.cc

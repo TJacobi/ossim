@@ -1,6 +1,7 @@
 #include "OverlayTopology.h"
 #include <boost/lexical_cast.hpp>
 #include <arpa/inet.h>
+#include <assert.h>
 
 using namespace std;
 using boost::lexical_cast;
