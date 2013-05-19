@@ -967,8 +967,8 @@ void DonetPeer::handleTimerTimeoutWaitingAccept()
 void DonetPeer::handleTimerReportStatistic()
 {
    //if (m_player->playerStarted() == true)
-//   if (simTime().dbl() < simulation.getWarmupPeriod().dbl())
-//      return;
+   if (simTime().dbl() < simulation.getWarmupPeriod().dbl())
+      return;
 
    reportHitMiss();
 
