@@ -5,15 +5,15 @@ import ned.DatarateChannel;
 import so.global.ActivePeerTable;
 import so.global.churn.IChurnModel;
 import so.global.churn.StaticChurn;
-//import so.global.statistic.GlobalStatistic;
-//import so.global.statistic.IStatisticBase;
 import so.global.statistic.IStreamingStatistic;
+import so.global.AppSettingDonet;
 
 import so.global.statistic.Statistic;
 import so.global.observer.MeshOverlayObserver;
 import so.global.logger.Logger;
 
-import so.global.AppSettingDonet;
+// -- For capturing the overlay topology
+import so.global.topology.OverlayTopologyDonet;
 
 import so.mesh.donet.DonetPeerNode;
 import so.mesh.donet.DonetSourceNode;
@@ -87,6 +87,8 @@ network Donet_Homo_oneRouter_Network extends BasicNetwork
             @display("p=184,29");
         }
         logger: Logger {
+        }
+        topoObserver: OverlayTopologyDonet {
         }
     connections:
         // -- old set-up
