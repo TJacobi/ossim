@@ -86,9 +86,9 @@ simple DonetStatistic like IStreamingStatistic
         @statistic[systemSize](source="Signal_SystemSize"; record=mean,vector);
 
         // Delay --->
-        @statistic[delayOneOverlayHop](source="Signal_DelayOneOverlayHop"; record=mean,min,max);
+        @statistic[delayOneOverlayHop](source="Signal_DelayOneOverlayHop"; record=mean,min,max,vector);
 
-        @statistic[overlayHopCount](source="Signal_OverlayHopCount"; record=mean,min,max);
+        @statistic[overlayHopCount](source="Signal_OverlayHopCount"; record=mean,min,max,vector);
         // <---- Delay
 
         //@statistic[SkipChunk](source="Signal_SkipChunk"; record=last,vector);
