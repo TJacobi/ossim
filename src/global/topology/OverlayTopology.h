@@ -2,13 +2,14 @@
 #define OVERLAYTOPOLOGY_H
 
 #include "TopologyModel.h"
+#include "AppSetting.h"
 
 class OverlayTopology : public cSimpleModule {
     typedef std::map<int, TopologyModel>::iterator Iterator;
     typedef std::map<int, TopologyModel>           TopologyMap;
     typedef std::list<PPEdge>                       PPEdgeList;
 
-private:
+protected:
     TopologyMap        topo;            ///< the topology data structure < streamID, Topology >
 
 public:
@@ -33,6 +34,7 @@ public:
     PPEdgeList         getEdges(const int sequence);
     void  setJoinTime(const int sequence, IPvXAddress node, double joinTime);
     void  setJoinTime(IPvXAddress node, double joinTime);
+
 };
 
 #endif // OVERLAYTOPOLOGY_H
