@@ -569,12 +569,21 @@ void DonetStatistic::reportRebuffering()
 
 void DonetStatistic::reportDelays(void)
 {
-   if (m_totalNumberOfReceivedChunk == 0L)
-   {
-      emit(sig_DelayOneOverlayHop, 0.0);
-      emit(sig_overlayHopCount, 0L);
-   }
-   else
+   if (simTime().dbl() < simulation.getWarmupPeriod().dbl())
+      return;
+
+//   if (m_totalNumberOfReceivedChunk == 0L)
+//   {
+//      emit(sig_DelayOneOverlayHop, 0.0);
+//      emit(sig_overlayHopCount, 0L);
+//   }
+//   else
+//   {
+//      emit(sig_DelayOneOverlayHop, m_totalEndToEndDelay / m_totalNumberOfReceivedChunk);
+//      emit(sig_overlayHopCount, (long double)(m_totalOverlayHopCount / m_totalNumberOfReceivedChunk));
+//   }
+
+   if (m_totalNumberOfReceivedChunk > 0L)
    {
       emit(sig_DelayOneOverlayHop, m_totalEndToEndDelay / m_totalNumberOfReceivedChunk);
       emit(sig_overlayHopCount, (long double)(m_totalOverlayHopCount / m_totalNumberOfReceivedChunk));
