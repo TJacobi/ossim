@@ -32,6 +32,7 @@ public:
     TopologyModel      getSequenceTopology(const int sequence);              ///< for hierarchy per sequence
     TopologyModel&     getSequenceTopologyRef(const int sequence);              ///< for hierarchy per sequence
     PPEdgeList         getEdges(const int sequence);
+
     void  setJoinTime(const int sequence, IPvXAddress node, double joinTime);
     void  setJoinTime(IPvXAddress node, double joinTime);
 
