@@ -350,7 +350,7 @@ void TopologyModel::addEdge(const std::string& stripe, const IPvXAddress from, c
     inEdgesCtr[to]++;
     DEBUGOUT(" \\ addEdge "<<from <<"->" << to << " in " << stripe << " increases #inbound[to]=" << inEdgesCtr[to] << " <= " << numStripes);
 
-    assert(inEdgesCtr[to] <= numStripes);
+    //assert(inEdgesCtr[to] <= numStripes); /// <--- disabled by Giang
     calculated = false;
 }
 
