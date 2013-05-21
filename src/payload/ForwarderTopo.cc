@@ -98,9 +98,12 @@ void ForwarderTopo::handleMessage(cMessage* msg)
 
    // -- Report to the topology observer
    long chunkSeqNum = chunkPkt->getSeqNumber();
+   EV << "!!!observing!!!" << endl;
+   EV << "current chunk: " << chunkSeqNum << " -- expected one: " << m_observedChunk << endl;
    if (chunkSeqNum == m_observedChunk)
    {
-      m_topoObserver->addNode(getNodeAddress(), m_topoSequence);
+      m_topoObserver->addNode(controlInfo->getDestAddr(), m_topoSequence);
       m_topoObserver->addEdge(m_topoSequence, controlInfo->getSrcAddr(), controlInfo->getDestAddr());
+      EV << "addNode & addEdge" << endl;
    }
 }
