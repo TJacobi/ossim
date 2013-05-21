@@ -12,4 +12,7 @@ simple OverlayTopologyDonet extends OverlayTopology
         string sourceAddress = default("192.168.0.1");
         //int observedChunk = default(1);
         int observeTime @unit(s) = default(1s);
+
+        // For result recording to an external file
+        string outputFilename = default("");
 }

@@ -5,6 +5,8 @@
 #include "AppSettingDonet.h"
 #include "OverlayTopology.h"
 
+#include <fstream>
+
 class OverlayTopologyDonet : public OverlayTopology
 {
 protected:
@@ -18,12 +20,19 @@ public:
     inline long getObservedChunk() { return m_observedChunk; }
     void collectEdge(const int sequence, const IPvXAddress& from, const IPvXAddress& to);
 
+    void addNode(const IPvXAddress& ip, const int sequence);  ///< for hierarchy per sequence
+    void addEdge(const int sequence, const IPvXAddress& from, const IPvXAddress& to); ///< for hierarchy per sequence
+
 private:
     AppSettingDonet* m_appSetting;
 
     std::string param_sourceAddress;
     long m_observedChunk;
     int param_observeTime;
+
+    // -- result recording
+
+    std::ofstream m_outFile;
 
 };
 
