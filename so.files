@@ -307,3 +307,6 @@ src/global/topology/OverlayTopologyDonet.cc
 src/global/attacker/AttackerModule.ned
 src/global/attacker/AttackerModule.h
 src/global/attacker/AttackerModule.cc
+src/global/attacker/AttackerModuleDonet.ned
+src/global/attacker/AttackerModuleDonet.h
+src/global/attacker/AttackerModuleDonet.cc
