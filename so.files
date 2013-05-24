@@ -304,3 +304,6 @@ src/payload/ForwarderTopo.cc
 src/global/topology/OverlayTopologyDonet.ned
 src/global/topology/OverlayTopologyDonet.h
 src/global/topology/OverlayTopologyDonet.cc
+src/global/attacker/AttackerModule.ned
+src/global/attacker/AttackerModule.h
+src/global/attacker/AttackerModule.cc
