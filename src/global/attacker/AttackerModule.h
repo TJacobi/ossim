@@ -41,8 +41,10 @@
 
 class AttackerModule : public cSimpleModule
 {
-protected:
+public:
+   virtual ~AttackerModule();
 
+protected:
    // *************** general purpose ***************
    void initStatistics();
    void updateDisplay();
@@ -63,6 +65,7 @@ public:
    int attackRecursive(const int sequence, const int num);
 
 protected:
+   cMessage *timer_attack;
 
    // ********** general configuration ***********
    // double rejoin;

@@ -37,6 +37,11 @@ using namespace std;
 
 Define_Module(AttackerModule);
 
+AttackerModule::~AttackerModule()
+{
+   if (timer_attack) cancelAndDelete(timer_attack);
+}
+
 /**
  * initialise the AttackerModule in Stage 5
  */
@@ -47,6 +52,8 @@ void AttackerModule::initialize(int stage) {
    //FIXME get pointer to OverlayTopology-module
    // --> will be done in the derived class AttackerModuleDonet
    //   oT = NULL;
+
+   timer_attack = new cMessage("ATTACKER_MODULE_TRIGGER");
 
    // the global attacker parameters
    startAttack = par("start").doubleValue();
@@ -65,7 +72,8 @@ void AttackerModule::initialize(int stage) {
    initStatistics();
 
    // schedule attacks+statistics
-   scheduleAt(simTime() + startAttack, new cMessage("GLOBAL_SCHED_ID"));
+   //scheduleAt(simTime() + startAttack, new cMessage("GLOBAL_SCHED_ID"));
+   scheduleAt(simTime() + startAttack, timer_attack);
    updateDisplay();
 
 }
@@ -101,7 +109,7 @@ void AttackerModule::handleMessage(cMessage* msg) {
    attackGlobal();
 
    if (simTime() + interval <= stopAttack) {
-      scheduleAt(simTime() + interval, msg);
+      scheduleAt(simTime() + interval, timer_attack);
       msg = NULL;
       return;
 
