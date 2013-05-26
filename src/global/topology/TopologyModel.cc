@@ -124,6 +124,12 @@ int TopologyModel::countSuccessors(const IPvXAddress& vertex, std::string stripe
 }
 
 
+int TopologyModel::countSuccessors() {
+    std::string stripe = "0-0";
+    return countSuccessors(stripe);
+}
+
+
 int TopologyModel::countSuccessors(const std::string stripe) {
     int succ = 0;
     foreach(IPvXAddress root, roots)
@@ -307,6 +313,13 @@ void TopologyModel::removeVertex(const IPvXAddress &vertex) {
     calculated = false;
 }
 
+int TopologyModel::removeCentralVertex() {
+
+    IPvXAddress vertex = getCentralVertex();
+    int damage = removeVertexRecursive(vertex);
+    return damage;
+}
+
 
 void TopologyModel::addEdge(const IPvXAddress from, const IPvXAddress to) {
 
@@ -485,6 +498,9 @@ IPvXAddress TopologyModel::getRandomVertex() const {
 }
 
 
+/**
+ * Get most relevant vertex that is not a root node
+ */
 IPvXAddress TopologyModel::getCentralVertex() {
 
     if (centrality.size() == 0)
@@ -561,6 +577,11 @@ void TopologyModel::removeInboundEdges(const IPvXAddress to) {
 
 }
 
+IPvXAddress TopologyModel::getPredecessor(const IPvXAddress& ip) const {
+
+    return getPredecessor(ip, "0-0");
+}
+
 
 /**
  * Returns a predecessor within the topology
@@ -573,16 +594,6 @@ void TopologyModel::removeInboundEdges(const IPvXAddress to) {
 IPvXAddress TopologyModel::getPredecessor(const IPvXAddress& ip, const std::string& stripe) const {
 
     std::string preferredStripe = stripe;
-    /*if (stripe.find("-1") != std::string::npos) {
-  throw cRuntimeError("TopologyModel::getPredecessor");
-  std::set<std::string>::iterator it = stripes.begin();
-  int stripeNum = intuniform(1,numStripes-1);
-  while(stripeNum != 0 && it != stripes.end()) {
-   stripeNum--;
-   it++;
-  }
-  preferredStripe = *it;
- }*/
 
     Graph::const_iterator it0 = graph.find(preferredStripe);
     if (it0 == graph.end())
@@ -681,6 +692,9 @@ void TopologyModel::resetLoss() {
     nodesServiceLost.clear();
 }
 
+bool TopologyModel::hasEdge(const IPvXAddress& from, const IPvXAddress& to) const {
+    return hasEdge("0-0", from, to);
+}
 
 bool TopologyModel::hasEdge(const std::string& stripe, const IPvXAddress& from, const IPvXAddress& to) const {
 

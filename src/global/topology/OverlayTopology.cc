@@ -31,8 +31,6 @@
 
 #include "OverlayTopology.h"
 #include <boost/lexical_cast.hpp>
-#include <arpa/inet.h>
-#include <assert.h>
 
 using namespace std;
 using boost::lexical_cast;
@@ -40,12 +38,11 @@ using boost::lexical_cast;
 Define_Module(OverlayTopology);
 
 
-void OverlayTopology::initialize()
-{
-
+void OverlayTopology::initialize() {
 }
 
 void OverlayTopology::finish() {
+    topo.clear();
 }
 
 void OverlayTopology::handleMessage(cMessage* msg) {
@@ -62,10 +59,9 @@ void OverlayTopology::handleMessage(cMessage* msg) {
 void OverlayTopology::setRoot(const IPvXAddress & root, const int sequence) {
    Enter_Method_Silent();
 
-   assert(topo.find(sequence) != topo.end());
-   if(topo.find(sequence) != topo.end())
-      topo[sequence].setRoot(root);
-
+    assert(topo.find(sequence) != topo.end());
+    if(topo.find(sequence) != topo.end())
+        topo[sequence].setRoot(root);
 }
 
 
@@ -135,16 +131,84 @@ PPEdgeList OverlayTopology::getEdges(const int sequence) {
 }
 
 
-TopologyModel OverlayTopology::getSequenceTopology(const int sequence) {
-   Enter_Method_Silent();
+TopologyModel OverlayTopology::getMostRecentTopology() {
+
+    int topoNum = getMaxRecentSeq();
+    return getTopology(topoNum);
+}
+
+
+TopologyModel OverlayTopology::getTopology() {
+
+    return getMostRecentTopology();
+}
+
+TopologyModel & OverlayTopology::getTopologyRef() {
+    int topoNum = getMaxRecentSeq();
+    return getTopologyRef(topoNum);
+}
+
+TopologyModel& OverlayTopology::getMostRecentTopologyRef(){
+    int topoNum = getMaxRecentSeq();
+    return getTopologyRef(topoNum);
+}
+
+TopologyModel OverlayTopology::getTopology(const int sequence) {
+    Enter_Method_Silent();
 
    assert(topo.find(sequence) != topo.end());
    return topo[sequence];
 }
 
-TopologyModel& OverlayTopology::getSequenceTopologyRef(const int sequence) {
-   Enter_Method_Silent();
+TopologyModel& OverlayTopology::getTopologyRef(const int sequence) {
+    Enter_Method_Silent();
 
    assert(topo.find(sequence) != topo.end());
    return topo[sequence];
+}
+
+
+int OverlayTopology::attackRecursive(const int num) {
+
+    // get most recent sequence number
+    int sequence = getMaxRecentSeq();
+    return attackRecursive(sequence, num);
+}
+
+
+int OverlayTopology::getMostRecentSeq() {
+
+    int seq = -1;
+    for(Iterator it = topo.begin(); it != topo.end(); it++) {
+        if(seq < it->first) seq = it->first;
+    }
+    assert(seq >= 0);
+    return seq;
+}
+
+// returns sequence number of topology
+// with maximum number of nodes
+int OverlayTopology::getMaxRecentSeq() {
+   int seq = -1;
+   int max = -1;
+   for(Iterator it = topo.begin(); it != topo.end(); it++) {
+       int num = it->second.numberVertexes();
+       if(max < num || (max == num && seq < it->first)) {
+           seq = it->first;
+           max = num;
+       }
+   }
+   assert(seq >= 0);
+   return seq;
+}
+
+
+int OverlayTopology::attackRecursive(const int sequence, const int num) {
+
+    TopologyModel topoM = getTopology(sequence);
+
+    int damage = 0;
+    for(int i = 0; i < num; i++) damage += topoM.removeCentralVertex();
+
+    return damage;
 }

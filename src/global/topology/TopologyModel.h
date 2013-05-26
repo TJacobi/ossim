@@ -3,10 +3,6 @@
 
 #include "PPDatatypes.h"
 #include <boost/shared_ptr.hpp>
-#include <boost/foreach.hpp>
-
-#define foreach BOOST_FOREACH
-#define reverse_foreach BOOST_REVERSE_FOREACH
 
 typedef boost::shared_ptr<PPIPvXAddressSet>	IPSetSmartPtr;
 
@@ -55,12 +51,14 @@ public:
     int         countSuccessors(const IPvXAddress& vertex);
     int         countSuccessors(const IPvXAddress& vertex, std::string stripe);
     int         countSuccessors(std::string stripe);
+    int         countSuccessors();
     int         countNotConnected();
 
     int         numInboundEdges(const IPvXAddress& vertex) const;
 
-    void	 	addVertex(const IPvXAddress vertex);
+    void	 	 addVertex(const IPvXAddress vertex);
     void        addVertex(const std::string& stripe, const IPvXAddress vertex);
+    int			 removeCentralVertex();
     void        removeVertex(const IPvXAddress& vertex);
     virtual int removeVertexRecursive(const IPvXAddress& vertex);
     int         removeVertexRecursive(const std::string& stripe, const IPvXAddress &vertex);
@@ -74,6 +72,7 @@ public:
     void        removeEdge(const std::string& stripe, const IPvXAddress& from, const IPvXAddress& to);
 
     bool        hasEdge(const std::string& stripe, const IPvXAddress& from, const IPvXAddress& to) const;
+    bool        hasEdge(const IPvXAddress& from, const IPvXAddress& to) const;
     bool        empty()                                                                            const;
 
     inline int  numberSources()                             const {return roots.size();}
@@ -93,6 +92,7 @@ public:
     inline PPStringSet      getStripes()                                                      const {return stripes;}
     inline int              getTotalNodeNumber()                                              const {return numNodes;}
 
+    IPvXAddress getPredecessor(const IPvXAddress &ip) const;
     IPvXAddress getPredecessor(const IPvXAddress& ip, const std::string& stripe)     const;
     IPvXAddress getPredecessorInclSource(const IPvXAddress& ip, std::string& stripe) const;
 
