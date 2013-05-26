@@ -45,7 +45,8 @@ void AttackerModule::initialize(int stage) {
    if (stage != 4) return;
 
    //FIXME get pointer to OverlayTopology-module
-//   oT = NULL;
+   // --> will be done in the derived class AttackerModuleDonet
+   //   oT = NULL;
 
    // the global attacker parameters
    startAttack = par("start").doubleValue();
@@ -115,14 +116,12 @@ void AttackerModule::handleMessage(cMessage* msg) {
 
 void AttackerModule::attackGlobal() {
 
-   // FIXME: attackRecursive is called from oT or from the attacker itself?
    // put stats here
-   //int damage = oT->attackRecursive(numAttack);
+   int damage = oT->attackRecursive(numAttack);
 
-   // FIXME - Giang: cannot cast from damage into double
    //FIXME recording the damage
-//   attackerDamage.collect((double) damage);
-//   attackerDamageTime.record((double) damage);
+   attackerDamage.collect((double) damage);
+   attackerDamageTime.record((double) damage);
 }
 
 
