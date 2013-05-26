@@ -72,7 +72,7 @@ protected:
    // ********** global attacker ****************
    double startAttack, stopAttack, interval;
    //double percentage;
-   //OverlayTopology* oT;
+   OverlayTopology* oT;
    int numAttack;
 
    // ************** statistics ****************
