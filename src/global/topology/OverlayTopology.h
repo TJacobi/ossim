@@ -24,8 +24,8 @@
 // -----------------------------------------------------------------------------
 // (C) Copyright 2012-2013, by Giang Nguyen (P2P, TU Darmstadt) and Contributors
 //
-// Contributors: Giang;
-// Code Reviewers: -;
+// Contributors: Mathias Fischer;
+// Code Reviewers: Giang Nguyen;
 // -----------------------------------------------------------------------------
 //
 
