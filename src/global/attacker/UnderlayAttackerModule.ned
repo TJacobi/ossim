@@ -1,6 +1,6 @@
 // This is the global attacker module.
 
-package p2pstreaming.modules.Attacker.UnderlayAttacker;
+package so.global.attacker;
 
 
 simple UnderlayAttackerModule
