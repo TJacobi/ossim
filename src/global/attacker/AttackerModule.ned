@@ -41,10 +41,12 @@ package so.global.attacker;
 simple AttackerModule
 {
     parameters:
-        volatile double start;
-        volatile double stop;
-        volatile double interval;
-        volatile double percentage;
-		volatile int numAttack;
-        double rejoin;
+        volatile double start @unit(s) = default(1s);
+        volatile double stop @unit(s) = default(1s);
+        volatile double interval @unit(s) = default(1s);
+
+        volatile int numAttack = default(0);
+        //volatile double percentage = default(0.1);
+        //double rejoin = default(false);
 }
+

@@ -45,17 +45,17 @@ void AttackerModule::initialize(int stage) {
    if (stage != 3) return;
 
    //FIXME get pointer to OverlayTopology-module
-   oT = NULL;
+//   oT = NULL;
 
    // the global attacker parameters
-   startAttack = par("start");
-   stopAttack = par("stop");
+   startAttack = par("start").doubleValue();
+   stopAttack = par("stop").doubleValue();
    assert(startAttack < stopAttack);
-   interval = par("interval");
+   interval = par("interval").doubleValue();
 
    // Percentage of nodes to attack
-   percentage = par("percentage");
-   numAttack = par("numAttack");
+   //percentage = par("percentage").doubleValue(); // not used so far
+   numAttack = par("numAttack").longValue();
 
    // the statistical parameters
    statname_damage_global = "streaming_importance_global";
@@ -69,10 +69,10 @@ void AttackerModule::initialize(int stage) {
 
 }
 
-TopologyModel AttackerModule::getTopo(const int sequence) {
+//TopologyModel AttackerModule::getTopo(const int sequence) {
 
-   return oT->getTopology(sequence);
-}
+//   return oT->getTopology(sequence);
+//}
 
 
 void AttackerModule::finish() {

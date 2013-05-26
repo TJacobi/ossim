@@ -34,9 +34,10 @@
 
 #include <string>
 #include <omnetpp.h>
+#include "OverlayTopology.h"
 
-class OverlayTopology;
-class TopologyModel;
+//class OverlayTopology;
+//class TopologyModel;
 
 class AttackerModule : public cSimpleModule
 {
@@ -64,13 +65,14 @@ public:
 protected:
 
    // ********** general configuration ***********
-   double rejoin;
+   // double rejoin;
    std::string damage;
    std::string estimate;
 
    // ********** global attacker ****************
-   double startAttack, stopAttack, interval, percentage;
-   OverlayTopology* oT;
+   double startAttack, stopAttack, interval;
+   //double percentage;
+   //OverlayTopology* oT;
    int numAttack;
 
    // ************** statistics ****************

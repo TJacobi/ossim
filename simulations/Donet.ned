@@ -14,6 +14,8 @@ import so.global.logger.Logger;
 
 // -- For capturing the overlay topology
 import so.global.topology.OverlayTopologyDonet;
+// -- For coordinating the attackers
+import so.global.attacker.AttackerModuleDonet;
 
 import so.mesh.donet.DonetPeerNode;
 import so.mesh.donet.DonetSourceNode;
@@ -89,6 +91,8 @@ network Donet_Homo_oneRouter_Network extends BasicNetwork
         logger: Logger {
         }
         topoObserver: OverlayTopologyDonet {
+        }
+        attacker: AttackerModuleDonet {
         }
     connections:
         // -- old set-up

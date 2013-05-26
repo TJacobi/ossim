@@ -35,9 +35,10 @@
 #include <string>
 #include <omnetpp.h>
 #include "AttackerModule.h"
+#include "OverlayTopologyDonet.h"
 
-class OverlayTopology;
-class TopologyModel;
+//class OverlayTopology;
+//class TopologyModel;
 
 class AttackerModuleDonet : public AttackerModule
 {
@@ -47,7 +48,9 @@ class AttackerModuleDonet : public AttackerModule
 //   void initStatistics();
 //   void updateDisplay();
 
-//public:
+public:
+   TopologyModel getTopo(const int sequence);
+
 protected:
 
    // *************** OMNETPP+INET *****************
@@ -60,26 +63,11 @@ protected:
 //   TopologyModel getTopo(const int sequence);
 
    // ****** Attacker ****
-//   void attackGlobal();
-//   int attackRecursive(const int sequence, const int num);
+   void attackGlobal();
+   int attackRecursive(const int sequence, const int num);
 
 protected:
-
-   // ********** general configuration ***********
-//   double rejoin;
-//   std::string damage;
-//   std::string estimate;
-
-   // ********** global attacker ****************
-//   double startAttack, stopAttack, interval, percentage;
-//   OverlayTopology* oT;
-//   int numAttack;
-
-   // ************** statistics ****************
-//   std::string statname_damage_global;
-//   cStdDev attackerDamage;
-//   cOutVector attackerDamageTime;
-//   cOutVector nodesOverallVec;
+   OverlayTopologyDonet* oT;
 
 };
 

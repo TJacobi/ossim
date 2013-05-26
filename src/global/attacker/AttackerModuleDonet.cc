@@ -30,7 +30,7 @@
 //
 
 #include "AttackerModuleDonet.h"
-//#include "OverlayTopology.h"
+#include "OverlayTopologyDonet.h"
 //#include "TopologyModel.h"
 
 using namespace std;
@@ -42,6 +42,11 @@ Define_Module(AttackerModuleDonet);
  */
 void AttackerModuleDonet::initialize(int stage)
 {
+   AttackerModule::initialize(stage);
+
+   // -- Binding to the global module Topology Observer
+   cModule *temp = simulation.getModuleByPath("topoObserver");
+   oT = check_and_cast<OverlayTopologyDonet *>(temp);
 
 //   if (stage != 3) return;
 
@@ -76,7 +81,9 @@ void AttackerModuleDonet::initialize(int stage)
 //}
 
 
-void AttackerModuleDonet::finish() {
+void AttackerModuleDonet::finish()
+{
+   AttackerModule::finish();
 
 //   // *** Statistics ***
 //   char buffer[128];
@@ -91,6 +98,8 @@ void AttackerModuleDonet::finish() {
 
 void AttackerModuleDonet::handleMessage(cMessage* msg)
 {
+   AttackerModule::finish();
+
 //   if (!msg->isSelfMessage()) {
 //      delete msg;
 //      msg = NULL;
@@ -113,7 +122,9 @@ void AttackerModuleDonet::handleMessage(cMessage* msg)
 }
 
 
-//void AttackerModule::attackGlobal() {
+void AttackerModuleDonet::attackGlobal()
+{
+   AttackerModule::attackGlobal();
 
    // FIXME: attackRecursive is called from oT or from the attacker itself?
    // put stats here
@@ -123,7 +134,7 @@ void AttackerModuleDonet::handleMessage(cMessage* msg)
    //FIXME recording the damage
 //   attackerDamage.collect((double) damage);
 //   attackerDamageTime.record((double) damage);
-//}
+}
 
 
 /**
@@ -155,3 +166,8 @@ void AttackerModuleDonet::handleMessage(cMessage* msg)
 //#endif
 //}
 
+
+TopologyModel AttackerModuleDonet::getTopo(const int sequence) {
+
+   return oT->getTopology(sequence);
+}

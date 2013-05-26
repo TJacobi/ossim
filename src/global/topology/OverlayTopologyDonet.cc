@@ -68,3 +68,8 @@ void OverlayTopologyDonet::addEdge(const int sequence, const IPvXAddress& from, 
 //   m_outFile << "sequence: " << sequence << " -- " << from.str() << " - " << to.str() << endl;
    OverlayTopology::addEdge(sequence, from, to);
 }
+
+TopologyModel OverlayTopologyDonet::getTopology(int sequence)
+{
+   return topo[sequence];
+}
