@@ -12,6 +12,10 @@
 //using forward class definitions here to avoid inclusion of headers and
 //unnecessary dependencies in other files
 #include "PPEdge.h"
+#include "boost/foreach.hpp"
+
+#define foreach BOOST_FOREACH
+#define reverse_foreach BOOST_REVERSE_FOREACH
 
 typedef std::list<int>                          PPIntList;
 typedef std::list<IPvXAddress>                  PPIPvXAddressList;

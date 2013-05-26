@@ -28,11 +28,21 @@ public:
     int           getNumTopologies();
 
     // topology per packet
-    TopologyModel      getSequenceTopology(const int sequence);              ///< for hierarchy per sequence
-    TopologyModel&     getSequenceTopologyRef(const int sequence);              ///< for hierarchy per sequence
+    TopologyModel      getTopology();
+    TopologyModel      getTopology(const int sequence);              ///< for hierarchy per sequence
+    TopologyModel&     getTopologyRef();
+    TopologyModel&     getTopologyRef(const int sequence);              ///< for hierarchy per sequence
+    TopologyModel      getMostRecentTopology();
+    TopologyModel&     getMostRecentTopologyRef();
     PPEdgeList         getEdges(const int sequence);
     void  setJoinTime(const int sequence, IPvXAddress node, double joinTime);
     void  setJoinTime(IPvXAddress node, double joinTime);
+
+    int getMostRecentSeq();
+    int getMaxRecentSeq();
+
+    int attackRecursive(const int num);
+    int attackRecursive(const int sequence, const int num);
 };
 
 #endif // OVERLAYTOPOLOGY_H

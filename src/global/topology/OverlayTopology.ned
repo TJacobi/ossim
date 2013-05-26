@@ -1,4 +1,4 @@
-package p2pstreaming.modules.Statistic;
+package so.global.topology;
 
 simple OverlayTopology
 {
