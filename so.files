@@ -310,3 +310,17 @@ src/global/attacker/AttackerModule.cc
 src/global/attacker/AttackerModuleDonet.ned
 src/global/attacker/AttackerModuleDonet.h
 src/global/attacker/AttackerModuleDonet.cc
+src/global/attacker/UnderlayAttackerModule.ned
+src/global/attacker/UnderlayAttackerModule.h
+src/global/attacker/UnderlayAttackerModule.cc
+src/traceroute/TracerouteTable.ned
+src/traceroute/TracerouteHandler.ned
+src/traceroute/Traceroute.ned
+src/traceroute/TracerouteTable.h
+src/traceroute/TracerouteHandler.h
+src/traceroute/Traceroute.h
+src/traceroute/StartTraceroute.msg
+src/traceroute/RouteMsg.msg
+src/traceroute/TracerouteTable.cc
+src/traceroute/TracerouteHandler.cc
+src/traceroute/Traceroute.cc
