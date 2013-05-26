@@ -68,7 +68,7 @@ protected:
    int attackRecursive(const int sequence, const int num);
 
 protected:
-   OverlayTopologyDonet* oT;
+   //OverlayTopologyDonet* oT;
 
 };
 
