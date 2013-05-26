@@ -68,7 +68,7 @@ public:
     void  setJoinTime(IPvXAddress node, double joinTime);
 
     // -- Interface to Attacker module
-//    TopologyModel getTopology(int sequence) {}
+    TopologyModel getTopology(int sequence) {}
 //     virtual TopologyModel getTopology(int sequence) = 0;
 
 };
