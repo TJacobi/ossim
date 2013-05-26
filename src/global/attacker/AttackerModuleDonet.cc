@@ -44,6 +44,9 @@ void AttackerModuleDonet::initialize(int stage)
 {
    AttackerModule::initialize(stage);
 
+   if (stage != 4)
+      return;
+
    // -- Binding to the global module Topology Observer
    cModule *temp = simulation.getModuleByPath("topoObserver");
    oT = check_and_cast<OverlayTopologyDonet *>(temp);
