@@ -38,11 +38,11 @@ using namespace std;
 Define_Module(AttackerModule);
 
 /**
- * initialise the AttackerModule in Stage 3.
+ * initialise the AttackerModule in Stage 5
  */
 void AttackerModule::initialize(int stage) {
 
-   if (stage != 3) return;
+   if (stage != 4) return;
 
    //FIXME get pointer to OverlayTopology-module
 //   oT = NULL;
