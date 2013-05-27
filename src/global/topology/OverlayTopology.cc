@@ -155,8 +155,26 @@ TopologyModel& OverlayTopology::getMostRecentTopologyRef(){
 
 TopologyModel OverlayTopology::getTopology(const int sequence) {
     Enter_Method_Silent();
-
+    EV << "sequence: " << sequence << endl;
+    if (topo.find(sequence) == topo.end())
+    {
+       EV << "no topology found!" << endl;
+    }
+    else
+    {
+       EV << "topology is present!" << endl;
+       EV << "number of elements: " << topo.size() << endl;
+    }
    assert(topo.find(sequence) != topo.end());
+
+   TopologyModel topoM = topo[sequence];
+
+    EV << "print edge list: " << endl;
+    PPEdgeList eList = topoM.getEdges();
+    for (PPEdgeList::iterator iter = eList.begin(); iter != eList.end(); ++iter)
+    {
+       EV << iter->begin() << " - " << iter->end() << endl;
+    }
    return topo[sequence];
 }
 
@@ -169,9 +187,12 @@ TopologyModel& OverlayTopology::getTopologyRef(const int sequence) {
 
 
 int OverlayTopology::attackRecursive(const int num) {
+   Enter_Method("attackRecursive");
 
     // get most recent sequence number
     int sequence = getMaxRecentSeq();
+    EV << "sequence = " << sequence << endl; // OK!
+
     return attackRecursive(sequence, num);
 }
 
@@ -204,8 +225,17 @@ int OverlayTopology::getMaxRecentSeq() {
 
 
 int OverlayTopology::attackRecursive(const int sequence, const int num) {
+   Enter_Method("attackRecursive(sequence,num");
 
     TopologyModel topoM = getTopology(sequence);
+    EV << "topoM is empty: " << topoM.empty() << endl;
+
+//    EV << "print edge list: " << endl;
+//    PPEdgeList eList = topoM.getEdges();
+//    for (PPEdgeList::iterator iter = eList.begin(); iter != eList.end(); ++iter)
+//    {
+//       EV << iter->begin() << " - " << iter->end() << endl;
+//    }
 
     int damage = 0;
     for(int i = 0; i < num; i++) damage += topoM.removeCentralVertex();

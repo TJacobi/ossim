@@ -49,8 +49,8 @@ class AttackerModuleDonet : public AttackerModule
 //   void initStatistics();
 //   void updateDisplay();
 
-public:
-   TopologyModel getTopo(const int sequence);
+//public:
+//   TopologyModel getTopo(const int sequence);
 
 protected:
 
