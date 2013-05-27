@@ -101,7 +101,7 @@ void AttackerModuleDonet::finish()
 
 void AttackerModuleDonet::handleMessage(cMessage* msg)
 {
-   AttackerModule::finish();
+   AttackerModule::handleMessage(msg);
 
 //   if (!msg->isSelfMessage()) {
 //      delete msg;
