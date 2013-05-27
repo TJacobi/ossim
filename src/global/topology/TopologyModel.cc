@@ -120,6 +120,10 @@ int TopologyModel::countSuccessors(const IPvXAddress& vertex) {
 
 
 int TopologyModel::countSuccessors(const IPvXAddress& vertex, std::string stripe) {
+   // CHECK IT
+   if (vertex.isUnspecified())
+      throw cException("vertex unspecified");
+
     return calculate(vertex, stripe);
 }
 
@@ -406,7 +410,10 @@ void TopologyModel::removeEdge(const std::string& stripe, const IPvXAddress& fro
 int TopologyModel::calculate(const IPvXAddress& vertex) {
     int successors = 0;
     foreach(std::string stripe, stripes)
+    {
+       if((!vertex.isUnspecified()))
         successors += calculate(vertex, stripe);
+    }
 
     return successors;
 }
@@ -417,7 +424,8 @@ int TopologyModel::calculate(const IPvXAddress& vertex) {
  */
 int TopologyModel::calculate(const IPvXAddress& vertex, std::string& stripe) {
 
-    if (vertex.isUnspecified()) throw cRuntimeError("In TopologyModel::calculate(): unspecified node");
+    //if (vertex.isUnspecified()) throw cRuntimeError("In TopologyModel::calculate(): unspecified node");
+    if (vertex.isUnspecified()) throw cException("In TopologyModel::calculate(): unspecified node");
     //DEBUGOUT("calculate "<< vertex << " in stripe " << stripe);
     if(graph[stripe].find(vertex) == graph[stripe].end())
         return 0;
@@ -473,7 +481,11 @@ void TopologyModel::calculate() {
 
     // Recursively calculate the centrality for each stripe
     foreach(std::string stripe, stripes) {
-        foreach(IPvXAddress root, roots){
+        foreach(IPvXAddress root, roots)
+        {
+           if (root.isUnspecified())
+              throw cException("root unspecified");
+
             calculate(root, stripe);
         }
     }
@@ -844,7 +856,11 @@ IPvXAddress TopologyModel::getBestChild(const IPvXAddress& father, std::string s
     PPIPvXAddressSet children = getChildren(father,stripe);
     IPvXAddress target;
     int counter = -1;
-    foreach(const IPvXAddress& addr, children){
+    foreach(const IPvXAddress& addr, children)
+    {
+       if (addr.isUnspecified())
+          throw cException("addr unspecified");
+
         int succ = calculate(addr,stripe);
         if(succ > counter) {
             target = addr;
