@@ -98,6 +98,9 @@ void AttackerModule::finish() {
 }
 
 void AttackerModule::handleMessage(cMessage* msg) {
+   Enter_Method("handleMessage");
+
+   EV << "handle messages" << endl;
 
    if (!msg->isSelfMessage()) {
       delete msg;
@@ -113,16 +116,20 @@ void AttackerModule::handleMessage(cMessage* msg) {
       msg = NULL;
       return;
 
-   } else {
-      delete msg;
-      msg = NULL;
    }
+//   else {
+//      delete msg;
+//      msg = NULL;
+//   }
 
-   assert(msg == NULL);
+//   assert(msg == NULL);
 }
 
 
 void AttackerModule::attackGlobal() {
+   Enter_Method("attackGlobal()");
+
+   EV << "Attack Global!" << endl;
 
    // put stats here
    int damage = oT->attackRecursive(numAttack);
@@ -131,8 +138,6 @@ void AttackerModule::attackGlobal() {
    attackerDamage.collect((double) damage);
    attackerDamageTime.record((double) damage);
 }
-
-
 
 
 /**
