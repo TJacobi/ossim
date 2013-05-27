@@ -49,7 +49,6 @@ void AttackerModule::initialize(int stage) {
 
    if (stage != 4) return;
 
-   //FIXME get pointer to OverlayTopology-module
    // --> will be done in the derived class AttackerModuleDonet
    //   oT = NULL;
 
@@ -78,10 +77,10 @@ void AttackerModule::initialize(int stage) {
 
 }
 
-//TopologyModel AttackerModule::getTopo(const int sequence) {
+TopologyModel AttackerModule::getTopo(const int sequence) {
 
-//   return oT->getTopology(sequence);
-//}
+   return oT->getTopology(sequence);
+}
 
 
 void AttackerModule::finish() {
@@ -134,7 +133,8 @@ void AttackerModule::attackGlobal() {
    // put stats here
    int damage = oT->attackRecursive(numAttack);
 
-   //FIXME recording the damage
+   EV << "damage = " << damage << endl;
+
    attackerDamage.collect((double) damage);
    attackerDamageTime.record((double) damage);
 }

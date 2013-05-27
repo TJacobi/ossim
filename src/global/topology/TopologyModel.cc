@@ -317,9 +317,13 @@ void TopologyModel::removeVertex(const IPvXAddress &vertex) {
     calculated = false;
 }
 
-int TopologyModel::removeCentralVertex() {
+int TopologyModel::removeCentralVertex()
+{
 
     IPvXAddress vertex = getCentralVertex();
+    EV << "Central Vertex: " << vertex << endl;
+    std::cout << "Central Vertex: " << vertex << endl;
+
     int damage = removeVertexRecursive(vertex);
     return damage;
 }
@@ -1123,12 +1127,34 @@ PPEdgeList TopologyModel::getEdges() {
 PPEdgeList TopologyModel::getEdges(std::string stripe) {
     PPEdgeList edges;
     edges.clear();
-    if (graph.count(stripe) == 0) return edges;
-    foreach (Vertexes::value_type node, graph[stripe]) {
-        foreach (PPIPvXAddressSet::value_type adjacent, node.second) {
+    if (graph.count(stripe) == 0)
+    {
+       EV << "no stripe!!!" << endl;
+       return edges;
+    }
+    else
+    {
+       EV << "there is one stripe!!!" << endl;
+    }
+
+    // FIXME-Giang: the following block does not produce list of edges, somehow!!!
+    foreach (Vertexes::value_type node, graph[stripe])
+    {
+       EV << "node " << node.first << " ";
+        foreach (PPIPvXAddressSet::value_type adjacent, node.second)
+        {
+           EV << "adjacent: " << adjacent << endl;
             edges.push_back(PPEdge(node.first, adjacent, age[node.first], age[adjacent]));
         }
     }
+
+    // -- Debugging:
+    EV << "print edge list with size " << edges.size() << ": " << endl;
+    for (PPEdgeList::iterator iter = edges.begin(); iter != edges.end(); ++iter)
+    {
+       EV << iter->begin() << " - " << iter->end() << endl;
+    }
+
     return edges;
 }
 
