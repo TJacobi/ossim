@@ -75,6 +75,8 @@ void AttackerModule::initialize(int stage) {
    scheduleAt(simTime() + startAttack, timer_attack);
    updateDisplay();
 
+   WATCH(numAttack);
+
 }
 
 TopologyModel AttackerModule::getTopo(const int sequence) {
