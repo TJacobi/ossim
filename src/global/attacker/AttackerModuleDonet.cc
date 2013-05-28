@@ -123,11 +123,11 @@ void AttackerModuleDonet::handleMessage(cMessage* msg)
 }
 
 
-void AttackerModuleDonet::attackGlobal()
-{
-   AttackerModule::attackGlobal();
+//void AttackerModuleDonet::attackGlobal()
+//{
+//   AttackerModule::attackGlobal();
 
-}
+//}
 
 
 /**
