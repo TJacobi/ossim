@@ -214,7 +214,9 @@ int TopologyModel::removeVertexRecursive(const IPvXAddress& vertex) {
 
     calculated = false;
     DEBUGOUT(" * affected = " << affected << " and original successors " << succ);
-    assert(affected == succ);
+
+    // FIXME-Giang: keep this assert or not?
+    //assert(affected == succ);
 
     if (loss)
         return nodesServiceLost.size() - affected;
@@ -241,7 +243,12 @@ int TopologyModel::removeVertexRecursive(const std::string& stripe, const IPvXAd
         numIncomingEdges += old - it->second.size();
         it++;
     }
-    assert(numIncomingEdges <= this->numStripes);
+
+    EV << "numIncomingEdges = " << numIncomingEdges << endl;
+    EV << "this->numStripes = " << this->numStripes << endl;
+
+    // FIXME-Giang: should keep this assert or not?
+    //assert(numIncomingEdges <= this->numStripes);
 
     // Remove all adjacent edges
     // These are tracked. An acyclic graph is expected.
@@ -319,7 +326,6 @@ void TopologyModel::removeVertex(const IPvXAddress &vertex) {
 
 int TopologyModel::removeCentralVertex()
 {
-
     IPvXAddress vertex = getCentralVertex();
     EV << "Central Vertex: " << vertex << endl;
     std::cout << "Central Vertex: " << vertex << endl;
@@ -1140,10 +1146,10 @@ PPEdgeList TopologyModel::getEdges(std::string stripe) {
     // FIXME-Giang: the following block does not produce list of edges, somehow!!!
     foreach (Vertexes::value_type node, graph[stripe])
     {
-       EV << "node " << node.first << " ";
+       EV << "node " << node.first << endl;
         foreach (PPIPvXAddressSet::value_type adjacent, node.second)
         {
-           EV << "adjacent: " << adjacent << endl;
+           EV << "\tadjacent: " << adjacent << endl;
             edges.push_back(PPEdge(node.first, adjacent, age[node.first], age[adjacent]));
         }
     }
