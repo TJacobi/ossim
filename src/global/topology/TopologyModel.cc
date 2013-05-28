@@ -12,7 +12,9 @@
 
 TopologyModel::TopologyModel() {
     calculated = true;
-    numStripes = 0;
+
+    // FIXME-Giang: hacked!!!
+    numStripes = 1;
     numNodes = 0;
     this->minRequiredStripes = 1;
     // FIXME: 	this is a hack to prevent that the data structure
@@ -216,12 +218,14 @@ int TopologyModel::removeVertexRecursive(const IPvXAddress& vertex) {
     DEBUGOUT(" * affected = " << affected << " and original successors " << succ);
 
     // FIXME-Giang: keep this assert or not?
-    //assert(affected == succ);
+    // ---> this assert doesn't really work
+//    assert(affected == succ);
 
-    if (loss)
-        return nodesServiceLost.size() - affected;
-    else
-        return affected;
+//    if (loss)
+//        return nodesServiceLost.size() - affected;
+//    else
+//        return affected;
+    return affected;
 }
 
 
@@ -328,7 +332,7 @@ int TopologyModel::removeCentralVertex()
 {
     IPvXAddress vertex = getCentralVertex();
     EV << "Central Vertex: " << vertex << endl;
-    std::cout << "Central Vertex: " << vertex << endl;
+    //std::cout << "Central Vertex: " << vertex << endl;
 
     int damage = removeVertexRecursive(vertex);
     return damage;
@@ -889,40 +893,40 @@ bool TopologyModel::empty() const {
 /**
  * add modelToInsert to this topology
  */
-void TopologyModel::insertTopology(TopologyModel modelToInsert) {
+//void TopologyModel::insertTopology(TopologyModel modelToInsert) {
 
-    //std::cout<<" globalTopology: " << getTotalNodeNumber() << " - inserting topology of size " << modelToInsert.getTotalNodeNumber()<<endl;
-    if(modelToInsert.empty()) return;
+//    //std::cout<<" globalTopology: " << getTotalNodeNumber() << " - inserting topology of size " << modelToInsert.getTotalNodeNumber()<<endl;
+//    if(modelToInsert.empty()) return;
 
-    setStripes(modelToInsert.getStripes());
-    setNumStripes(modelToInsert.getNumSeenStripes());
+//    setStripes(modelToInsert.getStripes());
+//    setNumStripes(modelToInsert.getNumSeenStripes());
 
-    // Set root nodes
-    foreach(std::set<IPvXAddress>::value_type ip, modelToInsert.roots)
-        this->setRoot(ip);
+//    // Set root nodes
+//    foreach(std::set<IPvXAddress>::value_type ip, modelToInsert.roots)
+//        this->setRoot(ip);
 
-    // Iterate across all stripes of graph
-    foreach(TopologyModel::Graph::value_type stripe, modelToInsert.graph) {
-        std::string stripeId = stripe.first;
-        DEBUGOUT("inserting elements of stripe " <<stripeId << "  to global topology");
+//    // Iterate across all stripes of graph
+//    foreach(TopologyModel::Graph::value_type stripe, modelToInsert.graph) {
+//        std::string stripeId = stripe.first;
+//        DEBUGOUT("inserting elements of stripe " <<stripeId << "  to global topology");
 
-        // first append all nodes
-        foreach(TopologyModel::Vertexes::value_type edge, stripe.second) {
-            IPvXAddress node = edge.first;
-            this->addVertex(stripeId,node);
-        }
+//        // first append all nodes
+//        foreach(TopologyModel::Vertexes::value_type edge, stripe.second) {
+//            IPvXAddress node = edge.first;
+//            this->addVertex(stripeId,node);
+//        }
 
-        // add edges
-        foreach(TopologyModel::Vertexes::value_type edge, stripe.second) {
-            PPIPvXAddressSet toNodeList = edge.second;
-            IPvXAddress from = edge.first;
-            foreach(IPvXAddress to, toNodeList) this->addEdge(stripeId, from, to);
-        }
+//        // add edges
+//        foreach(TopologyModel::Vertexes::value_type edge, stripe.second) {
+//            PPIPvXAddressSet toNodeList = edge.second;
+//            IPvXAddress from = edge.first;
+//            foreach(IPvXAddress to, toNodeList) this->addEdge(stripeId, from, to);
+//        }
 
-    }
-    //std::cout<<"    -> globalTopology know with " << getTotalNodeNumber()<< " nodes " << endl;
-    calculate();
-}
+//    }
+//    //std::cout<<"    -> globalTopology know with " << getTotalNodeNumber()<< " nodes " << endl;
+//    calculate();
+//}
 
 
 void TopologyModel::removeRoot(IPvXAddress root){
