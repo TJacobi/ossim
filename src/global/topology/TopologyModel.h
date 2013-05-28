@@ -128,7 +128,7 @@ public:
     bool        getNodeStability(const IPvXAddress& address);
     double      getSmallestHeadStability();
 
-    void        insertTopology(TopologyModel modelToInsert);
+//    void        insertTopology(TopologyModel modelToInsert);
     PPEdgeList  getEdges();
     PPEdgeList  getEdges(std::string stripe);
     PPIPvXAddressSet getVertexes();
