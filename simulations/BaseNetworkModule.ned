@@ -7,6 +7,11 @@ import so.global.statistic.IStreamingStatistic;
 import so.global.observer.MeshOverlayObserver;
 import so.global.logger.Logger;
 
+// -- For capturing the overlay topology
+import so.global.topology.OverlayTopologyDonet;
+// -- For coordinating the attackers
+import so.global.attacker.AttackerModuleDonet;
+
 // -- TODO: Unify the NED interface for statistic module and the appSetting module
 
 module BaseNetworkModule
@@ -39,6 +44,10 @@ module BaseNetworkModule
 
         logger: Logger {
             @display("p=77,510");
+        }
+        topoObserver: OverlayTopologyDonet {
+        }
+        attacker: AttackerModuleDonet {
         }
 }
 
