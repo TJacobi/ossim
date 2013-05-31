@@ -20,8 +20,9 @@ import so.global.attacker.AttackerModuleDonet;
 import so.mesh.donet.DonetPeerNode;
 import so.mesh.donet.DonetSourceNode;
 
-import inet.nodes.inet.Router;
-import inet.nodes.ethernet.EtherSwitch;
+//import inet.nodes.inet.Router;
+//import inet.nodes.ethernet.EtherSwitch;
+import so.underlay.inet.RouterTR;
 import inet.networklayer.autorouting.FlatNetworkConfigurator;
 
 //network Donet_oneRouter_underlayAttack extends BasicNetwork
@@ -58,7 +59,7 @@ network Donet_oneRouter_underlayAttack
         peerNode[nNodePerRouter]: DonetPeerNode {
         }
 
-        router: Router {
+        router: RouterTR {
             @display("p=329,136");
         }
 

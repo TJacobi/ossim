@@ -15,7 +15,7 @@ import so.underlay.NetworkLayerTR;
 //
 // \IP router.
 //
-module Router
+module RouterTR
 {
     parameters:
         @node();

@@ -25,10 +25,10 @@ import inet.networklayer.arp.ARP;
 import inet.networklayer.ipv4.ErrorHandling;
 import inet.networklayer.ipv4.ICMP;
 import inet.networklayer.ipv4.IGMP;
-import p2pstreaming.base.inet.IPMobility;
-import p2pstreaming.modules.Traceroute.Traceroute;
-//import inet.networklayer.ipv4.IP;
+import inet.networklayer.ipv4.IP;
+//import p2pstreaming.base.inet.IPMobility;
 
+import so.underlay.inet.traceroute.Traceroute;
 
 //
 // Network layer of an \IP node.
@@ -57,7 +57,7 @@ module NetworkLayerTR
         output pingOut;
 
     submodules:
-        ip: IPMobility {
+        ip: IP {
             parameters:
                 timeToLive = 32;
                 multicastTimeToLive = 32;
