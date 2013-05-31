@@ -17,11 +17,9 @@ import so.global.topology.OverlayTopologyDonet;
 // -- For coordinating the attackers
 import so.global.attacker.AttackerModuleDonet;
 
-import so.mesh.donet.DonetPeerNode;
-import so.mesh.donet.DonetSourceNode;
+import so.mesh.donet.DonetPeerNodeTR;
+import so.mesh.donet.DonetSourceNodeTR;
 
-//import inet.nodes.inet.Router;
-//import inet.nodes.ethernet.EtherSwitch;
 import so.underlay.inet.RouterTR;
 import inet.networklayer.autorouting.FlatNetworkConfigurator;
 
@@ -52,11 +50,11 @@ network Donet_oneRouter_underlayAttack
             datarate = 2Mbps;
         }
     submodules:
-        sourceNode: DonetSourceNode {
+        sourceNode: DonetSourceNodeTR {
             @display("p=388,50;i=device/server");
         }
 
-        peerNode[nNodePerRouter]: DonetPeerNode {
+        peerNode[nNodePerRouter]: DonetPeerNodeTR {
         }
 
         router: RouterTR {

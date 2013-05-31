@@ -32,7 +32,7 @@
 package so.mesh.donet;
 
 import so.mesh.donet.DonetSourceApp;
-import so.underlay.inet.NetworkLayer;
+import so.underlay.inet.NetworkLayerTR;
 
 import inet.base.NotificationBoard;
 import inet.linklayer.ethernet.EthernetInterface;
@@ -45,7 +45,7 @@ import inet.util.NAMTraceWriter;
 import inet.util.TCPDump;
 //import inet.nodes.inet.NetworkLayer;
 
-module DonetSourceNode
+module DonetSourceNodeTR
 {
     parameters:
         @node();
