@@ -13,7 +13,7 @@
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 // 
 
-package so.traceroute;
+package so.underlay.inet.traceroute;
 
 //
 // TODO auto-generated module
@@ -21,7 +21,6 @@ package so.traceroute;
 simple TracerouteTable
 {
 	parameters:
-	
 		bool useLinksForOverlap;
 		
 }
