@@ -306,7 +306,7 @@ void UnderlayAttackerModule::collectLinkData() {
  */
 void UnderlayAttackerModule::collectDataFromModule(cModule * mod) {
 
-   if(!mod->getSubmodule("udpApp",0)) return;
+   if(!mod->getSubmodule("peerApp",0)) return;
 
    //FIXME add pointer to TracerouteTable here
    TracerouteTable* rt = NULL;
