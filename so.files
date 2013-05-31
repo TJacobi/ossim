@@ -333,3 +333,5 @@ src/underlay/inet/traceroute/Traceroute.cc
 src/underlay/inet/RouterTR.ned
 src/mesh/donet/DonetSourceNodeTR.ned
 src/mesh/donet/DonetPeerNodeTR.ned
+simulations/Donet-overlayAttack.ned
+simulations/Donet-overlayAttack.ini
