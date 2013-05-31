@@ -47,6 +47,11 @@ AttackerModule::~AttackerModule()
  */
 void AttackerModule::initialize(int stage) {
 
+   if (stage == 0)
+   {
+      sig_damage = registerSignal("Signal_Damage");
+   }
+
    if (stage != 4) return;
 
    // --> will be done in the derived class AttackerModuleDonet
@@ -74,6 +79,8 @@ void AttackerModule::initialize(int stage) {
    //scheduleAt(simTime() + startAttack, new cMessage("GLOBAL_SCHED_ID"));
    scheduleAt(simTime() + startAttack, timer_attack);
    updateDisplay();
+
+   WATCH(numAttack);
 
 }
 
@@ -134,6 +141,8 @@ void AttackerModule::attackGlobal() {
    int damage = oT->attackRecursive(numAttack);
 
    EV << "damage = " << damage << endl;
+
+   emit(sig_damage, damage);
 
    attackerDamage.collect((double) damage);
    attackerDamageTime.record((double) damage);

@@ -192,6 +192,7 @@ int OverlayTopology::attackRecursive(const int num) {
     // get most recent sequence number
     int sequence = getMaxRecentSeq();
     EV << "sequence = " << sequence << endl; // OK!
+    EV << "num = " << num << endl;
 
     return attackRecursive(sequence, num);
 }
@@ -229,6 +230,7 @@ int OverlayTopology::attackRecursive(const int sequence, const int num) {
 
     TopologyModel topoM = getTopology(sequence);
     EV << "topoM is empty: " << topoM.empty() << endl;
+    EV << "num = " << num << endl;
 
 //    EV << "print edge list: " << endl;
 //    PPEdgeList eList = topoM.getEdges();
@@ -238,7 +240,10 @@ int OverlayTopology::attackRecursive(const int sequence, const int num) {
 //    }
 
     int damage = 0;
-    for(int i = 0; i < num; i++) damage += topoM.removeCentralVertex();
+    for(int i = 0; i < num; i++)
+    {
+       damage += topoM.removeCentralVertex();
+    }
 
     return damage;
 }

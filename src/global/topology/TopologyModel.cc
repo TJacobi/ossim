@@ -12,7 +12,9 @@
 
 TopologyModel::TopologyModel() {
     calculated = true;
-    numStripes = 0;
+
+    // FIXME-Giang: hacked!!!
+    numStripes = 1;
     numNodes = 0;
     this->minRequiredStripes = 1;
     // FIXME: 	this is a hack to prevent that the data structure
@@ -214,12 +216,16 @@ int TopologyModel::removeVertexRecursive(const IPvXAddress& vertex) {
 
     calculated = false;
     DEBUGOUT(" * affected = " << affected << " and original successors " << succ);
-    assert(affected == succ);
 
-    if (loss)
-        return nodesServiceLost.size() - affected;
-    else
-        return affected;
+    // FIXME-Giang: keep this assert or not?
+    // ---> this assert doesn't really work
+//    assert(affected == succ);
+
+//    if (loss)
+//        return nodesServiceLost.size() - affected;
+//    else
+//        return affected;
+    return affected;
 }
 
 
@@ -241,7 +247,12 @@ int TopologyModel::removeVertexRecursive(const std::string& stripe, const IPvXAd
         numIncomingEdges += old - it->second.size();
         it++;
     }
-    assert(numIncomingEdges <= this->numStripes);
+
+    EV << "numIncomingEdges = " << numIncomingEdges << endl;
+    EV << "this->numStripes = " << this->numStripes << endl;
+
+    // FIXME-Giang: should keep this assert or not?
+    //assert(numIncomingEdges <= this->numStripes);
 
     // Remove all adjacent edges
     // These are tracked. An acyclic graph is expected.
@@ -319,10 +330,9 @@ void TopologyModel::removeVertex(const IPvXAddress &vertex) {
 
 int TopologyModel::removeCentralVertex()
 {
-
     IPvXAddress vertex = getCentralVertex();
     EV << "Central Vertex: " << vertex << endl;
-    std::cout << "Central Vertex: " << vertex << endl;
+    //std::cout << "Central Vertex: " << vertex << endl;
 
     int damage = removeVertexRecursive(vertex);
     return damage;
@@ -883,40 +893,40 @@ bool TopologyModel::empty() const {
 /**
  * add modelToInsert to this topology
  */
-void TopologyModel::insertTopology(TopologyModel modelToInsert) {
+//void TopologyModel::insertTopology(TopologyModel modelToInsert) {
 
-    //std::cout<<" globalTopology: " << getTotalNodeNumber() << " - inserting topology of size " << modelToInsert.getTotalNodeNumber()<<endl;
-    if(modelToInsert.empty()) return;
+//    //std::cout<<" globalTopology: " << getTotalNodeNumber() << " - inserting topology of size " << modelToInsert.getTotalNodeNumber()<<endl;
+//    if(modelToInsert.empty()) return;
 
-    setStripes(modelToInsert.getStripes());
-    setNumStripes(modelToInsert.getNumSeenStripes());
+//    setStripes(modelToInsert.getStripes());
+//    setNumStripes(modelToInsert.getNumSeenStripes());
 
-    // Set root nodes
-    foreach(std::set<IPvXAddress>::value_type ip, modelToInsert.roots)
-        this->setRoot(ip);
+//    // Set root nodes
+//    foreach(std::set<IPvXAddress>::value_type ip, modelToInsert.roots)
+//        this->setRoot(ip);
 
-    // Iterate across all stripes of graph
-    foreach(TopologyModel::Graph::value_type stripe, modelToInsert.graph) {
-        std::string stripeId = stripe.first;
-        DEBUGOUT("inserting elements of stripe " <<stripeId << "  to global topology");
+//    // Iterate across all stripes of graph
+//    foreach(TopologyModel::Graph::value_type stripe, modelToInsert.graph) {
+//        std::string stripeId = stripe.first;
+//        DEBUGOUT("inserting elements of stripe " <<stripeId << "  to global topology");
 
-        // first append all nodes
-        foreach(TopologyModel::Vertexes::value_type edge, stripe.second) {
-            IPvXAddress node = edge.first;
-            this->addVertex(stripeId,node);
-        }
+//        // first append all nodes
+//        foreach(TopologyModel::Vertexes::value_type edge, stripe.second) {
+//            IPvXAddress node = edge.first;
+//            this->addVertex(stripeId,node);
+//        }
 
-        // add edges
-        foreach(TopologyModel::Vertexes::value_type edge, stripe.second) {
-            PPIPvXAddressSet toNodeList = edge.second;
-            IPvXAddress from = edge.first;
-            foreach(IPvXAddress to, toNodeList) this->addEdge(stripeId, from, to);
-        }
+//        // add edges
+//        foreach(TopologyModel::Vertexes::value_type edge, stripe.second) {
+//            PPIPvXAddressSet toNodeList = edge.second;
+//            IPvXAddress from = edge.first;
+//            foreach(IPvXAddress to, toNodeList) this->addEdge(stripeId, from, to);
+//        }
 
-    }
-    //std::cout<<"    -> globalTopology know with " << getTotalNodeNumber()<< " nodes " << endl;
-    calculate();
-}
+//    }
+//    //std::cout<<"    -> globalTopology know with " << getTotalNodeNumber()<< " nodes " << endl;
+//    calculate();
+//}
 
 
 void TopologyModel::removeRoot(IPvXAddress root){
@@ -1140,10 +1150,10 @@ PPEdgeList TopologyModel::getEdges(std::string stripe) {
     // FIXME-Giang: the following block does not produce list of edges, somehow!!!
     foreach (Vertexes::value_type node, graph[stripe])
     {
-       EV << "node " << node.first << " ";
+       EV << "node " << node.first << endl;
         foreach (PPIPvXAddressSet::value_type adjacent, node.second)
         {
-           EV << "adjacent: " << adjacent << endl;
+           EV << "\tadjacent: " << adjacent << endl;
             edges.push_back(PPEdge(node.first, adjacent, age[node.first], age[adjacent]));
         }
     }

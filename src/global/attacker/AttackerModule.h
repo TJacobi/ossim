@@ -84,6 +84,8 @@ protected:
    cOutVector attackerDamageTime;
    cOutVector nodesOverallVec;
 
+   simsignal_t sig_damage;
+
 };
 
 #endif // ATTACKER_H

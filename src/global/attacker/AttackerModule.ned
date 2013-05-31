@@ -48,5 +48,8 @@ simple AttackerModule
         volatile int numAttack = default(0);
         //volatile double percentage = default(0.1);
         //double rejoin = default(false);
+
+        // ----- Statistics -----
+        @statistic[damage](source="Signal_Damage"; record=mean,min,max,vector);
 }
 

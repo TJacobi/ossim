@@ -64,8 +64,8 @@ protected:
 //   TopologyModel getTopo(const int sequence);
 
    // ****** Attacker ****
-   void attackGlobal();
-   int attackRecursive(const int sequence, const int num);
+//   void attackGlobal();
+//   int attackRecursive(const int sequence, const int num);
 
 protected:
    //OverlayTopologyDonet* oT;
