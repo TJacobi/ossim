@@ -17,10 +17,10 @@
 #include "IPControlInfo.h"
 #include "StartTraceroute_m.h"
 #include "RouteMsg_m.h"
-#include "NodeTable.h"
+//#include "NodeTable.h"
 #include "IPvXAddress.h"
 #include "IPDatagram.h"
-#include "NodeDescriptor.h"
+//#include "NodeDescriptor.h"
 
 Define_Module(ICMPMobility);
 
@@ -47,18 +47,20 @@ void ICMPMobility::handleMessage(cMessage *msg)
     }
 
     //Message from Traceroute
-    if (!strcmp(arrivalGate->getName(), "from_trcrt")){
-       if(dynamic_cast<cPacket *>(msg)) if (dynamic_cast<RouteMsg *>(dynamic_cast<cPacket *>(msg)->getEncapsulatedPacket())){
-
-  	  		send(msg,"sendOut");
-    			return;
-
-	    	}else{
-
-  	  		sendEchoRequest(PK(msg));
-    			return;
-
-    		}
+    if (!strcmp(arrivalGate->getName(), "from_trcrt"))
+    {
+       if(dynamic_cast<cPacket *>(msg))
+       {
+          if (dynamic_cast<RouteMsg *>(dynamic_cast<cPacket *>(msg)->getEncapsulatedPacket()))
+          {
+             send(msg,"sendOut");
+             return;
+          }else
+          {
+             sendEchoRequest(PK(msg));
+             return;
+          }
+       }
     }
 }
 
