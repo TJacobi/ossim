@@ -1,6 +1,7 @@
 package so.simulations;
 
 import ned.DatarateChannel;
+import inet.networklayer.autorouting.FlatNetworkConfigurator;
 
 import so.global.ActivePeerTable;
 import so.global.churn.IChurnModel;
@@ -15,13 +16,13 @@ import so.global.logger.Logger;
 // -- For capturing the overlay topology
 import so.global.topology.OverlayTopologyDonet;
 // -- For coordinating the attackers
-import so.global.attacker.AttackerModuleDonet;
+//import so.global.attacker.AttackerModuleDonet;
+import so.global.attacker.UnderlayAttackerModule;
 
 import so.mesh.donet.DonetPeerNodeTR;
 import so.mesh.donet.DonetSourceNodeTR;
 
 import so.underlay.inet.RouterTR;
-import inet.networklayer.autorouting.FlatNetworkConfigurator;
 
 //network Donet_oneRouter_underlayAttack extends BasicNetwork
 network Donet_oneRouter_underlayAttack
@@ -93,7 +94,7 @@ network Donet_oneRouter_underlayAttack
         topoObserver: OverlayTopologyDonet {
         }
 
-        attacker: AttackerModuleDonet {
+        attacker: UnderlayAttackerModule {
         }
 
     connections:
