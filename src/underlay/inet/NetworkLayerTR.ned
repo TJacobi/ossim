@@ -35,7 +35,7 @@ import p2pstreaming.modules.Traceroute.Traceroute;
 //
 // Interfaces to transport layer: TCP, UDP, echo/ping, RSVP
 //
-module NetworkLayerMobility
+module NetworkLayerTR
 {
     parameters:
         bool proxyARP = default(true);
