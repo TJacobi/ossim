@@ -331,3 +331,5 @@ src/underlay/inet/traceroute/TracerouteTable.cc
 src/underlay/inet/traceroute/TracerouteHandler.cc
 src/underlay/inet/traceroute/Traceroute.cc
 src/underlay/inet/RouterTR.ned
+src/mesh/donet/DonetSourceNodeTR.ned
+src/mesh/donet/DonetPeerNodeTR.ned
