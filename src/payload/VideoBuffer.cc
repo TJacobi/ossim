@@ -45,7 +45,17 @@ Define_Module(VideoBuffer)
 
 VideoBuffer::VideoBuffer() {}
 
-VideoBuffer::~VideoBuffer() {}
+VideoBuffer::~VideoBuffer() {
+
+    std::vector<STREAM_BUFFER_ELEMENT_T>::iterator iter;
+    for(iter = m_streamBuffer.begin(); iter != m_streamBuffer.end(); ++ iter)
+    {
+        STREAM_BUFFER_ELEMENT_T &elem = *iter;
+        if (elem.m_chunk != NULL)
+            delete elem.m_chunk;
+    }
+    m_streamBuffer.clear();
+}
 
 void VideoBuffer::initialize(int stage)
 {
