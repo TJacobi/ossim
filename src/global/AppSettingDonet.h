@@ -66,10 +66,14 @@ public:
 
     int getPacketSizeVideoChunk(void) const;
 
+    int getNumberOfStripes(void);
+
 protected:
     int param_videoStreamBitRate; //par("videoStreamBitRate").longValue();
     int param_chunkSize;
     int param_bufferMapSize_second;
+
+    int param_numStripes;
 
     int m_videoStreamChunkRate;
     int m_bufferMapSize_chunk;

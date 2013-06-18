@@ -42,5 +42,7 @@ simple AppSettingDonet extends AppSetting
         int chunkSize           @unit(byte) = default(1250B);
         int bufferMapSize       @unit(s)    = default(2s);
         
+        int numberOfStripes                 = 1;
+        
         double interval_bufferMap @unit(s) = default(0s);
 }

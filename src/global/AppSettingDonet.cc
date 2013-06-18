@@ -52,6 +52,9 @@ void AppSettingDonet::initialize()
     param_chunkSize                 = par("chunkSize").longValue();
     param_bufferMapSize_second      = par("bufferMapSize").longValue();
 
+    param_numStripes                = par("numberOfStripes").longValue();
+    if (param_numStripes < 1) param_numStripes = 1;
+
     m_videoStreamChunkRate = param_videoStreamBitRate / param_chunkSize / 8;
     m_bufferMapSize_chunk = param_bufferMapSize_second * m_videoStreamChunkRate;
 
@@ -187,4 +190,8 @@ int AppSettingDonet::getPacketSizeVideoChunk(void) const
 double AppSettingDonet::getBufferMapInterval()
 {
     return param_interval_bufferMap;
+}
+
+int AppSettingDonet::getNumberOfStripes(void){
+    return param_numStripes;
 }
