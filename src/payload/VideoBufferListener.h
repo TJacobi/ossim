@@ -50,13 +50,15 @@
 #ifndef VIDEOBUFFERLISTENER_H_
 #define VIDEOBUFFERLISTENER_H_
 
+#include "IPvXAddress.h"
+
 class VideoBufferListener {
 public:
     VideoBufferListener();
     virtual ~VideoBufferListener();
 
 	// @brief gets called whenever the video Buffer receives a new chunk
-    virtual void onNewChunk(int sequenceNumber);
+    virtual void onNewChunk(IPvXAddress src, int sequenceNumber);
 };
 
 #endif /* VIDEOBUFFERLISTENER_H_ */

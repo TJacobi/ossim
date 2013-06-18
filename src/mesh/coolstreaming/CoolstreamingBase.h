@@ -158,7 +158,7 @@ protected:
    // @brief send a chunk identified by number to a partner
    void sendChunk(CoolstreamingPartner* dest, int number);
    // @brief gets called whenever a new chunk is received and sends it to his children
-   virtual void onNewChunk(int sequenceNumber);
+   virtual void onNewChunk(IPvXAddress src, int sequenceNumber);
 
 
    // -- utility functions

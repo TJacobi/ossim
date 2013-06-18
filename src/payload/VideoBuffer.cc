@@ -233,8 +233,9 @@ void VideoBuffer::insertPacket(VideoChunkPacket *packet)
 
 // listening support ->
     std::vector<VideoBufferListener*>::iterator it;
+    IPvXAddress src = check_and_cast<DpControlInfo *>(packet->getControlInfo())->getSrcAddr();
     for(it = mListeners.begin(); it != mListeners.end(); it++){
-        (*it)->onNewChunk(seq_num);
+        (*it)->onNewChunk(src, seq_num);
     }
 // <- listening support
 
@@ -297,8 +298,14 @@ void VideoBuffer::insertPacketDirect(VideoChunkPacket *packet)
 
 // listening support ->
     std::vector<VideoBufferListener*>::iterator it;
+    IPvXAddress src;
+
+    if (packet->getControlInfo() != NULL){
+        src = check_and_cast<DpControlInfo *>(packet->getControlInfo())->getSrcAddr();
+        ASSERT(false);
+    }
     for(it = mListeners.begin(); it != mListeners.end(); it++){
-        (*it)->onNewChunk(seq_num);
+        (*it)->onNewChunk(src, seq_num);
     }
 // <- listening support
 

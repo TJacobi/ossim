@@ -49,6 +49,7 @@
 
 // listening support ->
 #include "VideoBufferListener.h"
+#include "DpControlInfo_m.h"
 // <- listening support
 
 

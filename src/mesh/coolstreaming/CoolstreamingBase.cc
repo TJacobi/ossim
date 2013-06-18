@@ -464,7 +464,7 @@ void CoolstreamingBase::sendChunk(CoolstreamingPartner* dest, int number)
     m_forwarder->sendChunk(number, dest->getAddress(), m_destPort);
 }
 
-void CoolstreamingBase::onNewChunk(int sequenceNumber)
+void CoolstreamingBase::onNewChunk(IPvXAddress src, int sequenceNumber)
 {
     EV << "CoolstreamingBase::onNewChunk: " << m_localAddress.str() << " " << sequenceNumber << endl;
 
