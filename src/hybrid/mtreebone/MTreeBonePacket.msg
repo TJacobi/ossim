@@ -46,6 +46,8 @@ enum MTreeBonePacketType
 	MTREEBONE_CHUNK_DENY = 2;
 	MTREEBONE_NEIGHBOR_REQUEST = 3;
 	MTREEBONE_NEIGHBOR_REQUEST_RESPONSE = 4;
+	MTREEBONE_PARENT_REQUEST = 5;
+	MTREEBONE_PARENT_REQUEST_RESPONSE = 6;
 }
 
 packet MTreeBonePacket extends PeerStreamingPacket
@@ -90,6 +92,21 @@ packet MTreeBoneNeighborRequestPacket extends MTreeBonePacket
 packet MTreeBoneNeighborRequestResponsePacket extends MTreeBonePacket
 {
 	packetType = MTREEBONE_NEIGHBOR_REQUEST_RESPONSE;
+	
+	unsigned int stripeNumber;
+	bool isAccepted;
+}
+
+packet MTreeBoneParentRequestPacket extends MTreeBonePacket
+{
+	packetType = MTREEBONE_PARENT_REQUEST;
+	
+	unsigned int stripeNumber;
+}
+
+packet MTreeBoneParentRequestResponsePacket extends MTreeBonePacket
+{
+	packetType = MTREEBONE_PARENT_REQUEST_RESPONSE;
 	
 	unsigned int stripeNumber;
 	bool isAccepted;
