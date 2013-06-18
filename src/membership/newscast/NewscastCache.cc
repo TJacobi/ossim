@@ -63,7 +63,7 @@ NewscastCache::~NewscastCache()
 //    {
 //       if (*iter) delete *iter;
 //    }
-    EV << "~NewscastCacghe() -> DONE 2" << endl;
+    EV << "~NewscastCache() -> DONE 2" << endl;
     currentCache.clear();
 }
 
