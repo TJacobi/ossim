@@ -39,10 +39,9 @@ private:
     std::map<int, SimTime> m_PendingRequests; // sequence number, timeout
 
     void checkNeighbors();
-    void requestChunks(IPvXAddress peer);
-    void requestNextChunk(IPvXAddress peer, int max = 3);
-    bool requestChunk(IPvXAddress peer, int sequenceNumber);
-    void rerequestChunk(int sequenceNumber, IPvXAddress notHim);
+    void requestNextChunks(IPvXAddress peer, int max = 5);
+    bool requestChunkFromPeer(IPvXAddress peer, int sequenceNumber);
+    void requestChunk(int sequenceNumber, IPvXAddress notHim = IPvXAddress("0.0.0.0"));
 };
 
 #endif /* MTREEBONEPEER_H_ */

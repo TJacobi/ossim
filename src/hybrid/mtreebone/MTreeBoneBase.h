@@ -26,6 +26,8 @@
 #include "MTreeBonePeerInformation.h"
 #include "VideoBufferListener.h"
 
+#include <fstream>
+
 class MTreeBoneBase : public CommBase, public VideoBufferListener {
 public:
     MTreeBoneBase();
@@ -91,6 +93,12 @@ protected:
     // -- Pointers to /local/ modules
     VideoBuffer *m_videoBuffer;
     Forwarder   *m_forwarder;
+
+
+    // DEBUG ->
+    bool debugOutput;
+    std::ofstream m_outFileDebug;
+    // <- DEBUG
 };
 
 #endif /* MTREEBONEBASE_H_ */

@@ -23,6 +23,9 @@ MTreeBoneBase::MTreeBoneBase() {
 
 MTreeBoneBase::~MTreeBoneBase() {
     // TODO Auto-generated destructor stub
+
+    if (debugOutput)
+        m_outFileDebug.close();
 }
 
 void MTreeBoneBase::initBase() {
@@ -76,6 +79,16 @@ void MTreeBoneBase::initBase() {
 
     // schedule timers
     scheduleAt(simTime() + 1, timer_sendBufferMaps);
+
+    // DEBUG
+    debugOutput = true;//par("debugOutput").boolValue();
+    if (debugOutput)
+    {
+        std::string filename = m_localAddress.str();
+        EV << "DEBUG_OPEN_FILE: " << filename << endl;
+        m_outFileDebug.open(filename.c_str(), std::fstream::out);
+        m_outFileDebug << simTime().str() << " INIT " << endl;
+    }
 }
 
 void MTreeBoneBase::handleMessage(cMessage *msg)
@@ -157,13 +170,19 @@ void MTreeBoneBase::handleChunkRequest(IPvXAddress src, MTreeBoneChunkRequestPac
 
     EV << endl << endl << "MTreeBoneBase::handleChunkRequest @ " << m_localAddress.str() << " from " << src.str() << " -> " << pkt->getSequenceNumber() << endl << endl << endl;
 
+    m_outFileDebug << simTime().str() << " [UP] handling chunk request from " << src.str() << " sequencenumber: " << pkt->getSequenceNumber() << endl;
+
     if ( (param_MaxUploadFactor >= 1) && (m_videoBuffer->isInBuffer(pkt->getSequenceNumber())) && (m_FreeUploadList.containsItem(pkt->getSequenceNumber())) ){
         m_ChunksUploaded++;
         m_FreeUploadList.removeItem(pkt->getSequenceNumber());
+
+        m_outFileDebug << simTime().str() << " [UP] is in free upload list!" << endl;
         m_forwarder->sendChunk(pkt->getSequenceNumber(), src, m_destPort);
     }else if ((m_ChunksLeftForWindow > 0) && (m_videoBuffer->isInBuffer(pkt->getSequenceNumber()))){ // bandwidth left + do we have that chunk?
         m_ChunksLeftForWindow--;
         m_ChunksUploaded++;
+
+        m_outFileDebug << simTime().str() << " [UP] sending from limit, left: " << m_ChunksLeftForWindow << endl;
         m_forwarder->sendChunk(pkt->getSequenceNumber(), src, m_destPort);
     }else{  // send deny
         MTreeBoneChunkDenyPacket* resp = new MTreeBoneChunkDenyPacket();
@@ -176,6 +195,7 @@ void MTreeBoneBase::handleChunkRequest(IPvXAddress src, MTreeBoneChunkRequestPac
             resp->setRequestThis(0);
         }
 
+        m_outFileDebug << simTime().str() << " [UP] denied, limit left: " << m_ChunksLeftForWindow << " inBuffer: " << m_videoBuffer->isInBuffer(pkt->getSequenceNumber()) << endl;
         sendToDispatcher(resp, m_localPort, src, m_destPort);
 
         if (m_videoBuffer->isInBuffer(pkt->getSequenceNumber()))
@@ -199,7 +219,7 @@ MTreeBoneBufferMapPacket* MTreeBoneBase::prepareBufferMap(){
     ret->setBufferMapArraySize(m_videoBuffer->getSize());
     //for (unsigned int i = 0; i < ret->getBufferMapArraySize(); i++)
 //        ret->setBufferMap(i, m_videoBuffer->inBuffer(i));
-    for (unsigned int i = m_videoBuffer->getBufferStartSeqNum(); i <= m_videoBuffer->getHeadReceivedSeqNum(); i++)
+    for (int i = m_videoBuffer->getBufferStartSeqNum(); i <= m_videoBuffer->getHeadReceivedSeqNum(); i++)
         ret->setBufferMap(i % ret->getBufferMapArraySize(), m_videoBuffer->inBuffer(i));
     ret->setSequenceNumberStart(m_videoBuffer->getBufferStartSeqNum());
     ret->setSequenceNumberEnd(m_videoBuffer->getHeadReceivedSeqNum());
@@ -224,6 +244,8 @@ void MTreeBoneBase::processNeighborRequest(IPvXAddress src, MTreeBoneNeighborReq
         resp->setIsAccepted(true);
     }
 
+    m_outFileDebug << simTime().str() << " [NeighborRequest] from "<< src.str() <<" for "<< pkt->getStripeNumber() <<" accepted: "<< resp->getIsAccepted() << ", stripe full? "<< (m_Stripes[stripe].Neighbors.size() >= param_maxNOP) << endl;
+
     sendToDispatcher(resp, m_localPort, src, m_destPort);
 }
 
@@ -232,6 +254,8 @@ void MTreeBoneBase::processNeighborRequestResponse(IPvXAddress src, MTreeBoneNei
         return;
 
     int stripe = pkt->getStripeNumber();
+
+    m_outFileDebug << simTime().str() << " [NeighborRequestResponse] from "<< src.str() <<" for "<< pkt->getStripeNumber() <<" accepted: "<< pkt->getIsAccepted() << ", stripe full? "<< (m_Stripes[stripe].Neighbors.size() >= param_maxNOP) << endl;
 
     if (pkt->getIsAccepted()){
         // got enough neighbors in the mean time?
