@@ -57,6 +57,7 @@ void MTreeBoneBase::initBase() {
     param_numStripes  = m_appSetting->getNumberOfStripes();
     m_Stripes = new MTreeBoneStripeInformation[param_numStripes];
 
+    checkFreeUploadListState();
     // bind to Gossip protocol
     // this module is required to retrieve random peers and get their informations for partnerships and rearrangements
     temp = getParentModule()->getModuleByRelativePath("gossipProtocol");
@@ -153,6 +154,9 @@ void MTreeBoneBase::processPacket(cPacket *pkt)
             if (info != NULL)
                 info->updateFromBufferMap(check_and_cast<MTreeBoneBufferMapPacket *> (pkt));
             break;
+        case MTREEBONE_PARENT_REQUEST:
+            handleParentRequest(src, check_and_cast<MTreeBoneParentRequestPacket*> (pkt));
+            break;
         default:
         {
             throw cException("Unrecognized packet type!");
@@ -205,6 +209,24 @@ void MTreeBoneBase::handleChunkRequest(IPvXAddress src, MTreeBoneChunkRequestPac
 
         m_ChunksDenied++;
     }
+}
+
+void MTreeBoneBase::handleParentRequest(IPvXAddress src, MTreeBoneParentRequestPacket* pkt){
+    MTreeBoneParentRequestResponsePacket* resp = new MTreeBoneParentRequestResponsePacket();
+
+    int stripe = pkt->getStripeNumber();
+
+    resp->setStripeNumber(stripe);
+    resp->setIsAccepted( (param_MaxUploadFactor - m_Stripes[stripe].Children.size()) >= 1 ); // same max number of children for all stripes TODO: think about making it 1 + x ?
+
+    if (resp->getIsAccepted()){
+        m_Stripes[stripe].Children.addItem(src);
+        checkFreeUploadListState();
+    }
+
+    m_outFileDebug << simTime().str() << " [PARENTING] got request from " << src.str() << " status: "<< (resp->getIsAccepted() ? "accepted" : "denied") << endl;
+
+    sendToDispatcher(resp, m_localPort, src, m_destPort);
 }
 
 MTreeBoneBufferMapPacket* MTreeBoneBase::prepareBufferMap(){
@@ -285,6 +307,10 @@ void MTreeBoneBase::addNeighbor(IPvXAddress addr, int stripe){
 }
 void MTreeBoneBase::removeNeighbor(IPvXAddress addr, int stripe){
     m_Stripes[stripe].Neighbors.removeItem(addr);
+    m_Stripes[stripe].Children.removeItem(addr);
+    if (m_Stripes[stripe].Parent.equals(addr))
+        m_Stripes[stripe].Parent = IPvXAddress("0.0.0.0");
+    checkFreeUploadListState();
 
     bool remove = true;
     for (unsigned int i = 0; i < param_numStripes; i++){
@@ -314,6 +340,37 @@ MTreeBonePeerInformation* MTreeBoneBase::getPeerInformation(IPvXAddress addr){
 }
 
 void MTreeBoneBase::onNewChunk(IPvXAddress src, int sequenceNumber){
-    if (param_MaxUploadFactor >= 1)
+    if (m_FreeUploadListEnabled)
         m_FreeUploadList.addItem(sequenceNumber);
+
+    // takeover context, because we may send something
+    cComponent* origContext = simulation.getContext();
+    simulation.setContext(this);
+
+    int stripe = sequenceNumber % param_numStripes;
+    std::vector<IPvXAddress>::iterator it;
+
+    for ( it = m_Stripes[stripe].Children.begin(); it != m_Stripes[stripe].Children.end(); it++){
+        m_ChunksUploaded++;
+
+        m_outFileDebug << simTime().str() << " [UP] forwarding received chunk " << sequenceNumber << " to " << (*it).str() << endl;
+        m_forwarder->sendChunk(sequenceNumber, *it, m_destPort);
+    }
+
+    // reset context
+    simulation.setContext(origContext);
+}
+
+void MTreeBoneBase::checkFreeUploadListState(){
+    m_FreeUploadListEnabled = (param_MaxUploadFactor >= 1);
+    if (!m_FreeUploadListEnabled) // we dont have even enough bandwidth to support one peer ... -> just push chunks
+        return;
+
+    double children = 0;
+    for (unsigned int stripe = 0; stripe < param_numStripes; stripe++){
+        children += m_Stripes[stripe].Children.size();
+    }
+    children = children / param_numStripes;
+
+    m_FreeUploadListEnabled = ((param_MaxUploadFactor - children) >= 1);
 }

@@ -39,9 +39,14 @@ private:
     std::map<int, SimTime> m_PendingRequests; // sequence number, timeout
 
     void checkNeighbors();
+    void checkParents();
     void requestNextChunks(IPvXAddress peer, int max = 5);
     bool requestChunkFromPeer(IPvXAddress peer, int sequenceNumber);
     void requestChunk(int sequenceNumber, IPvXAddress notHim = IPvXAddress("0.0.0.0"));
+
+    bool wantToBeBoneNode(int stripe){return true;};
+
+    void handleParentRequestResponse(IPvXAddress src, MTreeBoneParentRequestResponsePacket* resp);
 };
 
 #endif /* MTREEBONEPEER_H_ */

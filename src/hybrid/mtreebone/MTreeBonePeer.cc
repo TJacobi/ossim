@@ -51,6 +51,7 @@ void MTreeBonePeer::handleTimerMessage(cMessage *msg){
     }
     else if (msg == timer_checkNeighbors){
         checkNeighbors();
+        checkParents();
         scheduleAt(simTime() + 5, timer_checkNeighbors);
     }
     else
@@ -74,11 +75,14 @@ void MTreeBonePeer::processPacket(cPacket *pkt){
             m_outFileDebug << simTime().str() << " [DOWN] our chunk request denied " << deny->getSequenceNumber() << " from " << src.str() << endl;
             if (deny->getRequestThis() > 0){
                 m_outFileDebug << simTime().str() << " [DOWN] reroutet to " << deny->getRequestThis() << " from " << src.str() << endl;
-                if (deny->getRequestThis() < m_videoBuffer->getBufferStartSeqNum())
+                if (deny->getRequestThis() < (unsigned int)m_videoBuffer->getBufferStartSeqNum())
                     m_outFileDebug << simTime().str() << " [DOWN] sadly its before our buffer start ..." << endl;
                 else
                     requestChunkFromPeer(src, deny->getRequestThis());
             }
+            break;
+        case MTREEBONE_PARENT_REQUEST_RESPONSE: // handle response
+            handleParentRequestResponse(src, check_and_cast<MTreeBoneParentRequestResponsePacket *> (pkt) );
             break;
         default:
         {
@@ -96,8 +100,6 @@ void MTreeBonePeer::processPacket(cPacket *pkt){
 }
 
 void MTreeBonePeer::onNewChunk(IPvXAddress src, int sequenceNumber){
-    MTreeBoneBase::onNewChunk(src, sequenceNumber);
-
     cComponent* origContext = simulation.getContext();
     simulation.setContext(this);
     MTreeBonePeerInformation* info = getPeerInformation(src);
@@ -110,6 +112,8 @@ void MTreeBonePeer::onNewChunk(IPvXAddress src, int sequenceNumber){
         requestNextChunks(src, 1);
     }
     simulation.setContext(origContext);
+
+    MTreeBoneBase::onNewChunk(src, sequenceNumber);
 }
 
 void MTreeBonePeer::requestNextChunks(IPvXAddress peer, int maxRequests){
@@ -229,4 +233,42 @@ void MTreeBonePeer::checkNeighbors(){
 
         }
     }
+}
+
+void MTreeBonePeer::checkParents(){
+
+    IPvXAddress addr;
+    MTreeBonePeerInformation* info;
+
+    for (unsigned int stripe = 0; stripe < param_numStripes; stripe ++){
+        if (m_Stripes[stripe].nextParentRequest > simTime()) // not waited long enough ...
+            continue;
+
+        if (!wantToBeBoneNode(stripe)) // we dont want to be a bone node?
+            continue;
+
+        if (m_Stripes[stripe].isBoneNode()) // we have a parent
+            continue;
+
+        for (unsigned int i = 0; i < m_Stripes[stripe].Neighbors.size(); i++){
+            int rnd = (int)intrand(m_Stripes[stripe].Neighbors.size());
+            addr = m_Stripes[stripe].Neighbors.at(rnd);
+
+            info = getPeerInformation(addr);
+            if ( (info == NULL) || (!info->isBoneNode(stripe)) ) // no peer information or peer is not a bone node?
+                continue;
+
+            m_Stripes[stripe].nextParentRequest = simTime() + 3;
+            MTreeBoneParentRequestPacket* req = new MTreeBoneParentRequestPacket();
+            req->setStripeNumber(stripe);
+            sendToDispatcher(req, m_localPort, addr, m_destPort);
+        }
+    }
+}
+
+void MTreeBonePeer::handleParentRequestResponse(IPvXAddress src, MTreeBoneParentRequestResponsePacket* resp){
+
+    if (resp->getIsAccepted())
+        m_Stripes[resp->getStripeNumber()].Parent = src;
+
 }

@@ -79,6 +79,8 @@ protected:
     double m_ChunksPerSecond;
     // @brief chunks left for this window
     double m_ChunksLeftForWindow;
+
+    bool m_FreeUploadListEnabled;
     genericList<int> m_FreeUploadList;
 
     unsigned int m_ChunksUploaded;
@@ -86,7 +88,9 @@ protected:
     unsigned int m_DebugOutput;
 
     void handleChunkRequest(IPvXAddress src, MTreeBoneChunkRequestPacket* pkt);
+    void checkFreeUploadListState();
 
+    void handleParentRequest(IPvXAddress src, MTreeBoneParentRequestPacket* pkt);
     // timers
     cMessage* timer_sendBufferMaps;
 
