@@ -18,6 +18,7 @@
 MTreeBoneStripeInformation::MTreeBoneStripeInformation() {
     // TODO Auto-generated constructor stub
     Parent = IPvXAddress("0.0.0.0");
+    nextParentRequest = 0;
 }
 
 MTreeBoneStripeInformation::~MTreeBoneStripeInformation() {

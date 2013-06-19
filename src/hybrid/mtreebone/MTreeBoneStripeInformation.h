@@ -31,6 +31,7 @@ public:
     genericList<IPvXAddress> Children;
     genericList<IPvXAddress> Neighbors;
     IPvXAddress Parent;
+    SimTime nextParentRequest;
 
     bool isBoneNode(){
         return !Parent.isUnspecified(); // Parent = we are bone node for this stripe

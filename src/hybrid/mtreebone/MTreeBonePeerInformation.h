@@ -31,6 +31,8 @@ public:
     int getSequenceNumberEnd(){return sequenceNumberEnd;}
     bool inBuffer(int sequenceNumber);
 
+    bool isBoneNode(int stripe){return isbonenode[stripe];}
+
     SimTime nextRequestTime;
 private:
     int sequenceNumberStart;
