@@ -36,6 +36,7 @@ private:
     cMessage* timer_checkNeighbors;
 
     // chunk request handling
+    bool param_DisablePush;
     std::map<int, SimTime> m_PendingRequests; // sequence number, timeout
 
     void checkNeighbors();
@@ -44,7 +45,7 @@ private:
     bool requestChunkFromPeer(IPvXAddress peer, int sequenceNumber);
     void requestChunk(int sequenceNumber, IPvXAddress notHim = IPvXAddress("0.0.0.0"));
 
-    bool wantToBeBoneNode(int stripe){return true;};
+    bool wantToBeBoneNode(int stripe){return !param_DisablePush;}; // simple method to disable the usage of push/parents};
 
     void handleParentRequestResponse(IPvXAddress src, MTreeBoneParentRequestResponsePacket* resp);
 };

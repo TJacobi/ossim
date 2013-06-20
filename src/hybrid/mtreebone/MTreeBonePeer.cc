@@ -33,6 +33,7 @@ void MTreeBonePeer::initialize(int stage){
         return;
     initBase();
 
+    param_DisablePush = par("disablePush");
     // create messages
     timer_joinNetwork    = new cMessage("MTreeBonePeer_JOIN_NETWORK");
     timer_checkNeighbors = new cMessage("MTreeBonePeer_CHECK_NEIGHBORS");

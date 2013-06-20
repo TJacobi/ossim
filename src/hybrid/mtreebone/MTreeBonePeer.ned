@@ -6,6 +6,8 @@ simple MTreeBonePeer extends MTreeBoneBase
 {
     parameters:
         @class(MTreeBonePeer);
+        
+        bool disablePush = default(false);
 }
 
 
