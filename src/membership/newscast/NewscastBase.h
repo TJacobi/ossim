@@ -69,6 +69,7 @@ public:
 
 public:
     // Interface: GossipProtocolWithUserData -->
+    // @brief: stores a copy! of data
     virtual void setOwnData(GossipUserData* data);
     virtual GossipUserData* getPeerData(IPvXAddress addr);
     // <-- Interface: GossipProtocolWithUserData

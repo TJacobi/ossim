@@ -49,6 +49,7 @@ public:
 
     /*
      * sets the data which should be send to other peers
+     * (stores a duplicate!)
      */
     virtual void setOwnData(GossipUserData* data);
 
