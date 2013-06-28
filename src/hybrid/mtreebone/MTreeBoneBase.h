@@ -18,6 +18,7 @@
 #include "CommBase.h"
 #include "IPvXAddress.h"
 #include "GossipProtocolWithUserData.h"
+#include "MTreeBoneGossipData.h"
 #include "MTreeBonePacket_m.h"
 #include "DpControlInfo_m.h"
 #include "VideoBuffer.h"
@@ -38,6 +39,7 @@ public:
     virtual void onNewChunk(IPvXAddress src, int sequenceNumber);
 protected:
     GossipProtocolWithUserData* m_Gossiper;
+    void updateOwnGossipData();
 
     // parameters
     // @brief maximum number of partners
@@ -88,6 +90,7 @@ protected:
     unsigned int m_DebugOutput;
 
     void handleChunkRequest(IPvXAddress src, MTreeBoneChunkRequestPacket* pkt);
+    void handleChunkRequestList(IPvXAddress src, MTreeBoneChunkRequestListPacket* pkt);
     void checkFreeUploadListState();
 
     void handleParentRequest(IPvXAddress src, MTreeBoneParentRequestPacket* pkt);
@@ -98,11 +101,18 @@ protected:
     VideoBuffer *m_videoBuffer;
     Forwarder   *m_forwarder;
 
+    int getHeadSequenceNumber(int stripe);
+    int getHeadSequenceNumber();
 
     // DEBUG ->
     bool debugOutput;
     std::ofstream m_outFileDebug;
+
+    static int globalUp;
+    static int globalDown;
     // <- DEBUG
+
+    unsigned int m_PlayerPosition;
 };
 
 #endif /* MTREEBONEBASE_H_ */

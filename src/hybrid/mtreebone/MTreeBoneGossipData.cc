@@ -14,27 +14,48 @@
 // 
 
 #include "MTreeBoneGossipData.h"
+//#define DODEBUG
+#ifdef DODEBUG
+    #include "MyDebugClass.h"
+#endif
+MTreeBoneGossipData::MTreeBoneGossipData(int numStripes) {
+#ifdef DODEBUG
+    debugOut("MTreeBoneGossipData::MTreeBoneGossipData()");
+    debugOut(numStripes);
+#endif
+    m_NumStripes = numStripes;
 
-MTreeBoneGossipData::MTreeBoneGossipData() {
-    // TODO Auto-generated constructor stub
-
+    m_IsBoneNode = new bool[numStripes];
+    m_NumChildren = new int[numStripes];
 }
 
 MTreeBoneGossipData::~MTreeBoneGossipData() {
+#ifdef DODEBUG
+    debugOut("MTreeBoneGossipData::~MTreeBoneGossipData()");
+#endif
     // TODO Auto-generated destructor stub
 }
 
 GossipUserData*  MTreeBoneGossipData::dup()const
 {
-    MTreeBoneGossipData* ret = new MTreeBoneGossipData();
-        ret->isBoneNode  = this->isBoneNode;
-        ret->numChildren = this->numChildren;
-        ret->distance    = this->distance;
+#ifdef DODEBUG
+    debugOut("MTreeBoneGossipData::dup()");
+#endif
+
+    MTreeBoneGossipData* ret = new MTreeBoneGossipData(m_NumStripes);
+    for (int i = 0; i < m_NumStripes; i++){
+        ret->setIsBoneNode (i, m_IsBoneNode[i]);
+        ret->setNumChildren(i, m_NumChildren[i]);
+    }
+    ret->setHeadChunk( m_HeadChunk );
 
     return ret;
 }
 
 long MTreeBoneGossipData::getSizeInBits()
 {
+#ifdef DODEBUG
+    debugOut("MTreeBoneGossipData::getSizeInBits()");
+#endif
     return 0;
 }

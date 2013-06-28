@@ -34,20 +34,28 @@ private:
     // timer
     cMessage* timer_joinNetwork;
     cMessage* timer_checkNeighbors;
+    cMessage* timer_chunkScheduler;
 
     // chunk request handling
     bool param_DisablePush;
+    int param_ChunkScheduleInterval;
+
     std::map<int, SimTime> m_PendingRequests; // sequence number, timeout
 
     void checkNeighbors();
     void checkParents();
-    void requestNextChunks(IPvXAddress peer, int max = 5);
-    bool requestChunkFromPeer(IPvXAddress peer, int sequenceNumber);
-    void requestChunk(int sequenceNumber, IPvXAddress notHim = IPvXAddress("0.0.0.0"));
 
     bool wantToBeBoneNode(int stripe){return !param_DisablePush;}; // simple method to disable the usage of push/parents};
 
     void handleParentRequestResponse(IPvXAddress src, MTreeBoneParentRequestResponsePacket* resp);
+
+    virtual void doChunkSchedule();
+    virtual void doChunkSchedule(unsigned int stripe);
+
+    int getNumberOfPeersWithChunk(int stripe, int chunk);
+    IPvXAddress getRandomPeerWithChunk(int stripe, int chunk);
+
+    bool requestIsPending(unsigned int sequenceNumber);
 };
 
 #endif /* MTREEBONEPEER_H_ */

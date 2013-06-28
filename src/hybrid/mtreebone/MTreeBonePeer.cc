@@ -20,7 +20,7 @@ inline int max(const int a, const int b) { return (a > b) ? a : b; }
 Define_Module(MTreeBonePeer);
 
 MTreeBonePeer::MTreeBonePeer(){
-
+    globalUp = globalDown = 0;
 }
 
 MTreeBonePeer::~MTreeBonePeer() {
@@ -34,9 +34,11 @@ void MTreeBonePeer::initialize(int stage){
     initBase();
 
     param_DisablePush = par("disablePush");
+    param_ChunkScheduleInterval = par("ScheduleInterval");
     // create messages
     timer_joinNetwork    = new cMessage("MTreeBonePeer_JOIN_NETWORK");
     timer_checkNeighbors = new cMessage("MTreeBonePeer_CHECK_NEIGHBORS");
+    timer_chunkScheduler = new cMessage("MTreeBonePeer_CHUNK_SCHEDULER");
 
     // schedule timers
     scheduleAt(simTime() + uniform(0,5), timer_joinNetwork);
@@ -49,11 +51,16 @@ void MTreeBonePeer::handleTimerMessage(cMessage *msg){
         cancelEvent(timer_joinNetwork);
 
         scheduleAt(simTime() + uniform(0,5), timer_checkNeighbors);
+        scheduleAt(simTime() + 1, timer_chunkScheduler);
     }
     else if (msg == timer_checkNeighbors){
         checkNeighbors();
         checkParents();
-        scheduleAt(simTime() + 5, timer_checkNeighbors);
+        scheduleAt(simTime() + 2.5, timer_checkNeighbors);
+    }
+    else if (msg == timer_chunkScheduler){
+        doChunkSchedule();
+        scheduleAt(simTime() + m_videoBuffer->getChunkInterval() * param_ChunkScheduleInterval, timer_chunkScheduler);
     }
     else
     {
@@ -65,23 +72,9 @@ void MTreeBonePeer::processPacket(cPacket *pkt){
     MTreeBonePacket* csp = dynamic_cast<MTreeBonePacket*>(pkt);
     if (csp == NULL) return;
 
-    MTreeBoneChunkDenyPacket* deny ;
     IPvXAddress src = check_and_cast<DpControlInfo *>(pkt->getControlInfo())->getSrcAddr();
 
     switch (csp->getPacketType()){
-        case MTREEBONE_CHUNK_DENY: // handle deny
-            deny = check_and_cast<MTreeBoneChunkDenyPacket*> (pkt);
-            m_PendingRequests.erase(deny->getSequenceNumber());
-
-            m_outFileDebug << simTime().str() << " [DOWN] our chunk request denied " << deny->getSequenceNumber() << " from " << src.str() << endl;
-            if (deny->getRequestThis() > 0){
-                m_outFileDebug << simTime().str() << " [DOWN] reroutet to " << deny->getRequestThis() << " from " << src.str() << endl;
-                if (deny->getRequestThis() < (unsigned int)m_videoBuffer->getBufferStartSeqNum())
-                    m_outFileDebug << simTime().str() << " [DOWN] sadly its before our buffer start ..." << endl;
-                else
-                    requestChunkFromPeer(src, deny->getRequestThis());
-            }
-            break;
         case MTREEBONE_PARENT_REQUEST_RESPONSE: // handle response
             handleParentRequestResponse(src, check_and_cast<MTreeBoneParentRequestResponsePacket *> (pkt) );
             break;
@@ -93,10 +86,12 @@ void MTreeBonePeer::processPacket(cPacket *pkt){
     }
 
     if (csp->getPacketType() == MTREEBONE_BUFFER_MAP){
-        if (m_videoBuffer->getBufferStartSeqNum() == 0){ // if we are behind set starting point to head - 2 seconds
-            m_videoBuffer->setBufferStartSeqNum( max((check_and_cast<MTreeBoneBufferMapPacket *> (pkt))->getSequenceNumberEnd()- m_ChunksPerSecond*2,0));
+        if (m_videoBuffer->getBufferStartSeqNum() == 0){ // if we are behind set starting point to head - x second(s)
+            // TODO: make it better ... maybe head - 50% buffersize?
+            //m_videoBuffer->setBufferStartSeqNum( max((check_and_cast<MTreeBoneBufferMapPacket *> (pkt))->getSequenceNumberEnd() - m_ChunksPerSecond*1 , 0));
+            //m_PlayerPosition = max((check_and_cast<MTreeBoneBufferMapPacket *> (pkt))->getSequenceNumberEnd() - m_ChunksPerSecond*3 , 0);
+            m_PlayerPosition = max((check_and_cast<MTreeBoneBufferMapPacket *> (pkt))->getSequenceNumberEnd() - m_videoBuffer->getSize()/2 , 0);
         }
-        requestNextChunks(src);
     }
 }
 
@@ -109,96 +104,13 @@ void MTreeBonePeer::onNewChunk(IPvXAddress src, int sequenceNumber){
     m_outFileDebug << simTime().str() << " [DOWN] got new chunk " << sequenceNumber << " from " << src.str() << endl;
 
     if (info != NULL){
-        info->nextRequestTime = 0;
-        requestNextChunks(src, 1);
+        info->chunksReceived++;
     }
     simulation.setContext(origContext);
 
+    globalDown++;
+
     MTreeBoneBase::onNewChunk(src, sequenceNumber);
-}
-
-void MTreeBonePeer::requestNextChunks(IPvXAddress peer, int maxRequests){
-    MTreeBonePeerInformation* info = getPeerInformation(peer);
-    if (info == NULL) return;
-
-    // last Chunk pending
-    if (info->nextRequestTime > simTime())
-        return;
-
-    int count = 0;
-
-    for (int i = max(info->getSequenceNumberStart(), m_videoBuffer->getBufferStartSeqNum()); i < info->getSequenceNumberEnd(); i++){
-        if (info->inBuffer(i))
-            if (requestChunkFromPeer(peer, i)){
-                count++;
-                info->nextRequestTime = simTime() + 0.4;
-                if (count >= maxRequests)
-                    return;
-            }
-    }
-
-    if (count == 0)
-        EV << endl << " MTreeBonePeer::requestNextChunk @ " << m_localAddress.str() << " NO REQUEST POSSIBLE FROM " << peer.str() << endl << endl << endl ;
-}
-bool MTreeBonePeer::requestChunkFromPeer(IPvXAddress peer, int sequenceNumber){
-
-    // check if we already have that chunk
-    if (m_videoBuffer->inBuffer(sequenceNumber))
-        return false;
-
-    // check if we already requested that chunk
-    std::map<int, SimTime>::iterator it = m_PendingRequests.find(sequenceNumber);
-    if ((it != m_PendingRequests.end()) && ( it->second > simTime() )) // request is already pending
-        return false;
-
-    // check if he is a neighbor of that stripe
-    int stripe = sequenceNumber % param_numStripes;
-    if (!m_Stripes[stripe].Neighbors.containsItem(peer))
-        return false;
-
-    m_PendingRequests.erase(sequenceNumber);
-    m_PendingRequests.insert(std::pair<int, SimTime>(sequenceNumber, simTime()+1));
-
-    EV << endl << " MTreeBonePeer::requestChunkFromPeer @ " << m_localAddress.str() << " -> " << sequenceNumber << endl << endl;
-
-    m_outFileDebug << simTime().str() << " [DOWN] requesting chunk " << sequenceNumber << " from " << peer.str() << endl;
-
-    MTreeBoneChunkRequestPacket* req = new MTreeBoneChunkRequestPacket();
-    req->setSequenceNumber(sequenceNumber);
-    sendToDispatcher(req, m_localPort, peer, m_destPort);
-
-    return true;
-}
-
-void MTreeBonePeer::requestChunk(int sequenceNumber, IPvXAddress notHim){
-
-    int stripe = sequenceNumber % param_numStripes;
-
-    if (m_Stripes[stripe].Neighbors.size() <= 1) // only one or none neighbor? -> exit
-        return;
-
-    IPvXAddress addr;
-    MTreeBonePeerInformation* info;
-
-
-    for (unsigned int i = 0; i < m_Stripes[stripe].Neighbors.size(); i++){
-        int rnd = (int)intrand(m_Stripes[stripe].Neighbors.size());
-        addr = m_Stripes[stripe].Neighbors.at(rnd);
-
-        if (addr.equals(notHim))
-            continue;
-
-        info = getPeerInformation(addr);
-
-        // last Chunk pending
-        if (info->nextRequestTime > simTime())
-            continue;
-
-        if (info->inBuffer(sequenceNumber) && (requestChunkFromPeer(addr, sequenceNumber))){
-            EV << endl << endl << endl << "     MTreeBonePeer::requestChunk " << sequenceNumber << " from " << addr.str() << " not " << notHim.str() << endl << endl << endl << endl;
-            break;
-        }
-    }
 }
 
 void MTreeBonePeer::checkNeighbors(){
@@ -224,11 +136,13 @@ void MTreeBonePeer::checkNeighbors(){
         }
 
         if (m_Stripes[i].Neighbors.size() < param_desiredNOP){ // stripe needs/wants more neighbors
-            IPvXAddress addr = m_Gossiper->getRandomPeer(m_localAddress);
-            if ((!addr.isUnspecified()) && (!m_Stripes[i].Neighbors.containsItem(addr))){
-                MTreeBoneNeighborRequestPacket* request = new MTreeBoneNeighborRequestPacket();
-                request->setStripeNumber(i);
-                sendToDispatcher(request, m_localPort, addr, m_destPort);
+            for (int j = 0; j < (param_desiredNOP - m_Stripes[i].Neighbors.size()); j++){
+                IPvXAddress addr = m_Gossiper->getRandomPeer(m_localAddress);
+                if ((!addr.isUnspecified()) && (!m_Stripes[i].Neighbors.containsItem(addr))){
+                    MTreeBoneNeighborRequestPacket* request = new MTreeBoneNeighborRequestPacket();
+                    request->setStripeNumber(i);
+                    sendToDispatcher(request, m_localPort, addr, m_destPort);
+                }
             }
         }else if(m_Stripes[i].Neighbors.size() > param_maxNOP){ // too many neighbors? shouldnt be possible ..
 
@@ -263,6 +177,7 @@ void MTreeBonePeer::checkParents(){
             MTreeBoneParentRequestPacket* req = new MTreeBoneParentRequestPacket();
             req->setStripeNumber(stripe);
             sendToDispatcher(req, m_localPort, addr, m_destPort);
+            break;
         }
     }
 }
@@ -272,4 +187,160 @@ void MTreeBonePeer::handleParentRequestResponse(IPvXAddress src, MTreeBoneParent
     if (resp->getIsAccepted())
         m_Stripes[resp->getStripeNumber()].Parent = src;
 
+}
+
+void MTreeBonePeer::doChunkSchedule(){
+    m_PlayerPosition += param_ChunkScheduleInterval;
+    if (m_PlayerPosition < getHeadSequenceNumber() - m_videoBuffer->getSize()*0.75) // adjust position ... TODO: check if this ok and how to alter player
+        m_PlayerPosition = getHeadSequenceNumber() - m_videoBuffer->getSize()/2;
+    for (unsigned int i = 0; i < param_numStripes; i++)
+        doChunkSchedule(i);
+}
+
+void inline addRequestToMap(std::map<IPvXAddress, genericList<int> >* list, IPvXAddress addr, unsigned int chunk){
+    std::map<IPvXAddress, genericList<int> >::iterator it = list->find(addr);
+
+    if (it == list->end()){ // no entry
+        genericList<int> insert;
+        insert.addItem(chunk);
+        list->insert(std::pair<IPvXAddress, genericList<int> >(addr, insert));
+    }else{
+        it->second.addItem(chunk);
+    }
+}
+
+int inline getRequestCountInMap(std::map<IPvXAddress, genericList<int> >* list, IPvXAddress addr){
+    std::map<IPvXAddress, genericList<int> >::iterator it = list->find(addr);
+
+    if (it == list->end()){ // no entry
+        return 0;
+    }else{
+        return it->second.size();
+    }
+}
+
+
+void MTreeBonePeer::doChunkSchedule(unsigned int stripe){
+    unsigned int oldestChunk = ((m_PlayerPosition % param_numStripes) == stripe)? m_PlayerPosition : m_PlayerPosition + (stripe - m_PlayerPosition % param_numStripes) + param_numStripes;
+    unsigned int newestChunk = m_PlayerPosition + m_videoBuffer->getSize()/2;
+
+    if (m_Stripes[stripe].isBoneNode())
+        newestChunk = max(m_videoBuffer->getHeadReceivedSeqNum() - m_ChunksPerSecond, oldestChunk + m_ChunksPerSecond * 3);
+    m_outFileDebug << simTime().str() << " [doChunkSchedule] pos " << oldestChunk << endl;
+
+    IPvXAddress addr;
+    MTreeBonePeerInformation* info;
+    std::map<IPvXAddress, genericList<int> >* requests = new std::map<IPvXAddress, genericList<int> >();
+    int numberOfRequests = 0;
+
+    // loop through the first chunk we require until the last chunk we need at the moment
+    // TODO: look for push AND critical regions!
+    // 1. loop = look for chunks with only one neighbor owning them
+    for (unsigned int chunk = oldestChunk; chunk < newestChunk; chunk++){
+        if ( (!m_videoBuffer->inBuffer(chunk)) && (! requestIsPending(chunk) ) ) // we dont have that chunk + request is not pending
+            if (getNumberOfPeersWithChunk(stripe, chunk) == 1){ // it only exists one peer who has that chunk
+                addr = getRandomPeerWithChunk(stripe, chunk); // get that peer
+                m_outFileDebug << simTime().str() << " [DOWN] request chunk from single source " << chunk << " , " << addr.str() << endl;
+                if (getRequestCountInMap(requests, addr) < 25){
+                    addRequestToMap(requests, addr, chunk);       // add him to the request list
+                    numberOfRequests++;
+                }
+            }
+    }
+
+    // 2. loop = look for chunks with only one neighbor owning them
+    for (unsigned int chunk = oldestChunk; chunk < newestChunk; chunk++){
+        if ( (!m_videoBuffer->inBuffer(chunk)) && (! requestIsPending(chunk) ) ) // we dont have that chunk + request is not pending
+            if (getNumberOfPeersWithChunk(stripe, chunk) > 1){ // only if multiply copies exist ...
+                std::vector<IPvXAddress>::iterator it;
+                IPvXAddress best; double bestQuality = -1;
+                for (it = m_Stripes[stripe].Neighbors.begin(); it != m_Stripes[stripe].Neighbors.end(); it++){
+                    info = getPeerInformation(*it);
+                    if ( (info->inBuffer(chunk)) && (getRequestCountInMap(requests, *it) < 15)){
+                        double quality = ((numberOfRequests+1) - getRequestCountInMap(requests, *it)) / (numberOfRequests+1);// * info->getQuality();
+                        if (quality > bestQuality){
+                            bestQuality = quality;
+                            best = *it;
+                        }
+                    }
+                }
+
+                if (bestQuality > 0){
+                    m_outFileDebug << simTime().str() << " [DOWN] picking " << best.str() << " for chunk " << chunk << " quality: " << bestQuality << endl;
+                    addRequestToMap(requests, best, chunk);
+                    numberOfRequests++;
+                }
+            }
+    }
+
+    // now prepare and send requests
+    std::map<IPvXAddress, genericList<int> >::iterator iter;
+    for (iter = requests->begin(); iter != requests->end(); iter++){
+        if (iter->second.size() == 0) continue;
+
+        MTreeBoneChunkRequestListPacket* pkt = new MTreeBoneChunkRequestListPacket();
+        pkt->setSequenceNumbersArraySize(iter->second.size());
+        for (unsigned int i = 0; i < iter->second.size(); i++){
+            m_PendingRequests.insert(std::pair<int, SimTime>(iter->second.at(i), simTime()+0.5));
+            pkt->setSequenceNumbers(i, iter->second.at(i));
+        }
+
+        info = getPeerInformation(iter->first);
+        info->requestsSend += iter->second.size();
+
+        m_outFileDebug << simTime().str() << " [DOWN] sending request list to " << iter->first.str() << " count: " << iter->second.size() << endl;
+
+        sendToDispatcher(pkt, m_localPort, iter->first, m_destPort);
+    }
+
+    delete requests;
+}
+
+
+int MTreeBonePeer::getNumberOfPeersWithChunk(int stripe, int chunk){
+    std::vector<IPvXAddress>::iterator it;
+    MTreeBonePeerInformation* info;
+
+    int ret = 0;
+
+    for (it = m_Stripes[stripe].Neighbors.begin(); it != m_Stripes[stripe].Neighbors.end(); it++){
+        info = getPeerInformation(*it);
+        if (info->inBuffer(chunk))
+            ret++;
+    }
+
+    return ret;
+}
+
+IPvXAddress MTreeBonePeer::getRandomPeerWithChunk(int stripe, int chunk){
+    std::vector<IPvXAddress>::iterator it;
+    MTreeBonePeerInformation* info;
+
+    for (it = m_Stripes[stripe].Neighbors.begin(); it != m_Stripes[stripe].Neighbors.end(); it++){
+        info = getPeerInformation(*it);
+        if (info->inBuffer(chunk))
+            return (*it);
+    }
+
+    return IPvXAddress("0.0.0.0");
+}
+
+bool MTreeBonePeer::requestIsPending(unsigned int sequenceNumber){
+    //m_outFileDebug << simTime().str() << " [requestIsPending] a " << sequenceNumber << endl;
+    // check if we already requested that chunk
+    std::map<int, SimTime>::iterator it = m_PendingRequests.find(sequenceNumber);
+    if (it == m_PendingRequests.end())
+        return false;
+
+    //m_outFileDebug << simTime().str() << " [requestIsPending] b " << sequenceNumber << " timeout: " << it->second << endl;
+
+    if (it->second < simTime() ){ // timed out
+        m_outFileDebug << simTime().str() << " [DOWN] timed out: " << sequenceNumber << endl;
+        m_PendingRequests.erase(it);
+        return false;
+    }
+
+    //m_outFileDebug << simTime().str() << " [requestIsPending] c " << sequenceNumber << endl;
+
+    return true;
 }

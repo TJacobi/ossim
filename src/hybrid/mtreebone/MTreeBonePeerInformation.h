@@ -34,9 +34,18 @@ public:
     bool isBoneNode(int stripe){return isbonenode[stripe];}
 
     SimTime nextRequestTime;
+
+    unsigned int requestsSend;
+    unsigned int chunksReceived;
+
+    double getQuality(){
+        if (requestsSend == 0) return 1;
+        double quality = (double)chunksReceived / (double)requestsSend;
+        return (quality > 0.1) ? quality : 0.1;
+    }
 private:
-    int sequenceNumberStart;
-    int sequenceNumberEnd;
+    unsigned int sequenceNumberStart;
+    unsigned int sequenceNumberEnd;
 
     int buffersize;
     bool* buffermap;

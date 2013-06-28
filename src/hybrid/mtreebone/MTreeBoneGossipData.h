@@ -16,21 +16,36 @@
 #ifndef MTREEBONEGOSSIPDATA_H_
 #define MTREEBONEGOSSIPDATA_H_
 
+
+//#define DODEBUG
+#ifdef DODEBUG
+    #include "MyDebugClass.h"
+#endif
+
 #include "GossipUserData.h"
 
 class MTreeBoneGossipData: public GossipUserData {
 public:
-    MTreeBoneGossipData();
+    MTreeBoneGossipData(int numStripes);
     virtual ~MTreeBoneGossipData();
 
     virtual GossipUserData* dup() const;
 
     virtual long getSizeInBits();
 
-public:
-    bool isBoneNode;
-    int  numChildren;
-    int  distance;
+    void setHeadChunk(unsigned int number){m_HeadChunk = number;}
+    unsigned int getHeadChunk(){return m_HeadChunk;}
+
+    void setIsBoneNode(int stripe, bool val){ if (stripe >= m_NumStripes) return; m_IsBoneNode[stripe] = val;}
+    bool getIsBoneNode(int stripe){ if (stripe >= m_NumStripes) return false; return m_IsBoneNode[stripe];}
+
+    void setNumChildren(int stripe, int val){ if (stripe >= m_NumStripes) return; m_NumChildren[stripe] = val;}
+    int getNumChildren(int stripe){ if (stripe >= m_NumStripes) return 0; return m_NumChildren[stripe];}
+private:
+    int          m_NumStripes;
+    bool*        m_IsBoneNode;
+    int*         m_NumChildren;
+    unsigned int m_HeadChunk; // used as a "distance"-metric
 
 };
 

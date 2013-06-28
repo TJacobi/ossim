@@ -8,6 +8,7 @@ simple MTreeBonePeer extends MTreeBoneBase
         @class(MTreeBonePeer);
         
         bool disablePush = default(false);
+        int ScheduleInterval = default(15);
 }
 
 

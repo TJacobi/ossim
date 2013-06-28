@@ -32,6 +32,8 @@ MTreeBonePeerInformation::MTreeBonePeerInformation(int stripes, int buffersize) 
         isbonenode[i] = false;
 
     sequenceNumberStart = sequenceNumberEnd = 0;
+
+    requestsSend = chunksReceived = 0;
 }
 
 MTreeBonePeerInformation::~MTreeBonePeerInformation() {

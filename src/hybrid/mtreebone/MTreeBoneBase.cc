@@ -16,6 +16,9 @@
 #include "MTreeBoneBase.h"
 #include "AppSettingDonet.h"
 
+int MTreeBoneBase::globalUp = 0;
+int MTreeBoneBase::globalDown = 0;
+
 MTreeBoneBase::MTreeBoneBase() {
     // TODO Auto-generated constructor stub
 
@@ -23,6 +26,13 @@ MTreeBoneBase::MTreeBoneBase() {
 
 MTreeBoneBase::~MTreeBoneBase() {
     // TODO Auto-generated destructor stub
+
+    delete [] this->m_Stripes;
+
+    std::map<IPvXAddress, MTreeBonePeerInformation*>::iterator it;
+
+    for (it = m_Neighbors.begin(); it != m_Neighbors.end(); it++)
+        delete it->second;
 
     if (debugOutput)
         m_outFileDebug.close();
@@ -112,6 +122,12 @@ void MTreeBoneBase::handleTimerMessage(cMessage *msg){
         MTreeBoneBufferMapPacket* map = prepareBufferMap(); // prepare packet
 
         EV << "  -> " << map->getSequenceNumberStart() << " , " << map->getSequenceNumberEnd() << endl;
+        EV << " GLOBAL: down: " << globalDown << " , up: " << globalUp << endl;
+        EV << " Player position: " << m_PlayerPosition << endl;
+
+        EV << " Parents for Stripes: " << endl;
+        for (unsigned int i = 0; i < param_numStripes; i++)
+            EV << " Stripe " << i << ": " << ((m_Stripes[i].Parent.isUnspecified()) ? " NONE" : m_Stripes[i].Parent.str()) << endl;
 
         double avg = (double)m_ChunksUploaded * 100 / (m_ChunksUploaded + m_DebugOutput); //(double)m_ChunksUploaded*100 / (m_ChunksPerSecond * param_MaxUploadFactor * simTime());
         EV << endl << "  Upload left: " << m_ChunksLeftForWindow << " / " << (m_ChunksPerSecond * param_MaxUploadFactor) << " , approx avg utilization: " << avg << endl << endl;
@@ -125,6 +141,9 @@ void MTreeBoneBase::handleTimerMessage(cMessage *msg){
         }
 
         delete map; // delete prepared packet
+
+        updateOwnGossipData(); // update gossip data
+
         scheduleAt(simTime() + 0.5, timer_sendBufferMaps); // reschedule
     }
 }
@@ -138,6 +157,7 @@ void MTreeBoneBase::processPacket(cPacket *pkt)
     MTreeBonePeerInformation* info;
 
     EV << "received packet: " << csp->getPacketType() << " @ " << m_localAddress.str() << endl;
+    m_outFileDebug << simTime().str() << " [DEBUG] received packet " << csp->getPacketType() << endl;
 
     switch (csp->getPacketType()){
         case MTREEBONE_NEIGHBOR_REQUEST:
@@ -148,6 +168,9 @@ void MTreeBoneBase::processPacket(cPacket *pkt)
             break;
         case MTREEBONE_CHUNK_REQUEST:
             handleChunkRequest(src, check_and_cast<MTreeBoneChunkRequestPacket *> (pkt));
+            break;
+        case MTREEBONE_CHUNK_REQUEST_LIST:
+            handleChunkRequestList(src, check_and_cast<MTreeBoneChunkRequestListPacket *> (pkt));
             break;
         case MTREEBONE_BUFFER_MAP:
             info = getPeerInformation(src);
@@ -202,9 +225,7 @@ void MTreeBoneBase::handleChunkRequest(IPvXAddress src, MTreeBoneChunkRequestPac
         m_outFileDebug << simTime().str() << " [UP] denied, limit left: " << m_ChunksLeftForWindow << " inBuffer: " << m_videoBuffer->isInBuffer(pkt->getSequenceNumber()) << endl;
         sendToDispatcher(resp, m_localPort, src, m_destPort);
 
-        if (m_videoBuffer->isInBuffer(pkt->getSequenceNumber()))
-            ;
-        else
+        if (!m_videoBuffer->isInBuffer(pkt->getSequenceNumber()))
             EV << " handleChunkRequest: NOT IN BUFFER " << pkt->getSequenceNumber() << " , " << m_videoBuffer->getBufferStartSeqNum() << " - " << m_videoBuffer->getHeadReceivedSeqNum() << endl;
 
         m_ChunksDenied++;
@@ -217,9 +238,9 @@ void MTreeBoneBase::handleParentRequest(IPvXAddress src, MTreeBoneParentRequestP
     int stripe = pkt->getStripeNumber();
 
     resp->setStripeNumber(stripe);
-    resp->setIsAccepted( (param_MaxUploadFactor - m_Stripes[stripe].Children.size()) >= 1 ); // same max number of children for all stripes TODO: think about making it 1 + x ?
+    resp->setIsAccepted( ((param_MaxUploadFactor - m_Stripes[stripe].Children.size()) > 1) || (m_Stripes[stripe].Children.containsItem(src)) ); // same max number of children for all stripes TODO: think about making it 1 + x ?
 
-    if (resp->getIsAccepted()){
+    if ( (resp->getIsAccepted()) && (!(m_Stripes[stripe].Children.containsItem(src))) ){
         m_Stripes[stripe].Children.addItem(src);
         checkFreeUploadListState();
     }
@@ -251,7 +272,7 @@ MTreeBoneBufferMapPacket* MTreeBoneBase::prepareBufferMap(){
 
 
 void MTreeBoneBase::processNeighborRequest(IPvXAddress src, MTreeBoneNeighborRequestPacket* pkt){
-    if ((unsigned int)pkt->getStripeNumber() > param_numStripes) // some one sending mailformed packets ...
+    if (pkt->getStripeNumber() > param_numStripes) // some one sending mailformed packets ...
         return;
 
     MTreeBoneNeighborRequestResponsePacket* resp = new MTreeBoneNeighborRequestResponsePacket();
@@ -272,7 +293,7 @@ void MTreeBoneBase::processNeighborRequest(IPvXAddress src, MTreeBoneNeighborReq
 }
 
 void MTreeBoneBase::processNeighborRequestResponse(IPvXAddress src, MTreeBoneNeighborRequestResponsePacket* pkt){
-    if ((unsigned int)pkt->getStripeNumber() > param_numStripes) // some one sending mailformed packets ...
+    if (pkt->getStripeNumber() > param_numStripes) // some one sending mailformed packets ...
         return;
 
     int stripe = pkt->getStripeNumber();
@@ -325,7 +346,7 @@ void MTreeBoneBase::removeNeighbor(IPvXAddress addr, int stripe){
 
         if (it != m_Neighbors.end()){
             delete it->second;
-               m_Neighbors.erase(it);
+            m_Neighbors.erase(it);
         }
     }
 }
@@ -373,4 +394,107 @@ void MTreeBoneBase::checkFreeUploadListState(){
     children = children / param_numStripes;
 
     m_FreeUploadListEnabled = ((param_MaxUploadFactor - children) >= 1);
+}
+
+void MTreeBoneBase::updateOwnGossipData(){
+    MTreeBoneGossipData* data = new MTreeBoneGossipData(param_numStripes);
+
+    data->setHeadChunk(m_videoBuffer->getHeadReceivedSeqNum());
+    for (unsigned int stripe = 0; stripe < param_numStripes; stripe++){
+        data->setIsBoneNode(stripe, m_Stripes[stripe].isBoneNode());
+        data->setNumChildren(stripe, m_Stripes[stripe].Children.size());
+    }
+    /*GossipUserData* data2 = data->dup();
+    GossipUserData* data3 = data2->dup();*/
+
+    /*m_outFileDebug << "[DEBUG] " << data4->getHeadChunk() << endl; m_outFileDebug.flush();
+    m_outFileDebug << "[DEBUG] " << data4->getIsBoneNode(0) << endl; m_outFileDebug.flush();
+    m_outFileDebug << "[DEBUG] " << data4->getNumChildren(0) << endl; m_outFileDebug.flush();*/
+
+    m_Gossiper->setOwnData(data);
+    delete data;
+}
+
+void MTreeBoneBase::handleChunkRequestList(IPvXAddress src, MTreeBoneChunkRequestListPacket* pkt){
+    if (m_UploadNextReset < simTime()){ // Bandwidth limit rest?
+        m_UploadNextReset = simTime() + 1;
+        m_DebugOutput += (int)m_ChunksLeftForWindow;
+
+        m_ChunksLeftForWindow = m_ChunksPerSecond * ((param_MaxUploadFactor >= 1) ? param_MaxUploadFactor - 1 : param_MaxUploadFactor); // TODO: subtract children
+    }
+
+    EV << endl << endl << "MTreeBoneBase::handleChunkRequestList @ " << m_localAddress.str() << " from " << src.str() << " -> " << pkt->getSequenceNumbersArraySize() << endl << endl << endl;
+
+    m_outFileDebug << simTime().str() << " [UP] handling chunk request list from " << src.str() << " sequencenumber count: " << pkt->getSequenceNumbersArraySize() << endl;
+
+    for (unsigned int i = 0; i < pkt->getSequenceNumbersArraySize(); i++){
+        int seqNumber = pkt->getSequenceNumbers(i);
+        m_outFileDebug << simTime().str() << " [UP] handling chunk request from " << src.str() << " sequencenumber: " << seqNumber << endl;
+
+        if ( (param_MaxUploadFactor >= 1) && (m_videoBuffer->isInBuffer(seqNumber)) && (m_FreeUploadList.containsItem(seqNumber)) ){
+            m_ChunksUploaded++;
+            m_FreeUploadList.removeItem(seqNumber);
+
+            m_outFileDebug << simTime().str() << " [UP] is in free upload list!" << endl;
+            m_forwarder->sendChunk(seqNumber, src, m_destPort);
+            globalUp++;
+        }else if ((m_ChunksLeftForWindow > 0) && (m_videoBuffer->isInBuffer(seqNumber))){ // bandwidth left + do we have that chunk?
+            m_ChunksLeftForWindow--;
+            m_ChunksUploaded++;
+
+            m_outFileDebug << simTime().str() << " [UP] sending from limit, left: " << m_ChunksLeftForWindow << endl;
+            m_forwarder->sendChunk(seqNumber, src, m_destPort);
+            globalUp++;
+        }else{  // send deny
+            /*MTreeBoneChunkDenyPacket* resp = new MTreeBoneChunkDenyPacket();
+            resp->setSequenceNumber(seqNumber);
+
+            if (m_FreeUploadList.size() > 0){
+                int rnd = (int)intrand(m_FreeUploadList.size());
+                resp->setRequestThis(m_FreeUploadList.at(rnd));
+            }else {
+                resp->setRequestThis(0);
+            }*/
+
+            m_outFileDebug << simTime().str() << " [UP] denied, limit left: " << m_ChunksLeftForWindow << " inBuffer: " << m_videoBuffer->isInBuffer(seqNumber) << endl;
+            /*sendToDispatcher(resp, m_localPort, src, m_destPort);
+
+            if (m_videoBuffer->isInBuffer(seqNumber))
+                ;
+            else
+                EV << " handleChunkRequest: NOT IN BUFFER " << seqNumber << " , " << m_videoBuffer->getBufferStartSeqNum() << " - " << m_videoBuffer->getHeadReceivedSeqNum() << endl;
+             */
+
+            m_ChunksDenied++;
+        }
+    }
+}
+
+
+int MTreeBoneBase::getHeadSequenceNumber(int stripe){
+    std::vector<IPvXAddress>::iterator it;
+    MTreeBonePeerInformation* info;
+
+    int ret = 0;
+
+    for (it = m_Stripes[stripe].Neighbors.begin(); it != m_Stripes[stripe].Neighbors.end(); it++){
+        info = getPeerInformation(*it);
+        int stripeChunk = info->getSequenceNumberEnd();
+        stripeChunk = ((stripeChunk % param_numStripes) == stripe)? stripeChunk : stripeChunk + (stripe - stripeChunk % param_numStripes);
+        ret = max(ret, stripeChunk);
+    }
+
+    return ret;
+}
+
+int MTreeBoneBase::getHeadSequenceNumber(){
+    std::map<IPvXAddress, MTreeBonePeerInformation*>::iterator it;
+
+    int ret = 0;
+
+    for (it = m_Neighbors.begin(); it != m_Neighbors.end(); it++){
+        ret = max(ret, it->second->getSequenceNumberEnd());
+    }
+
+    return ret;
 }
