@@ -127,6 +127,7 @@ public:
     // Debug
     void printStatus();
 
+    int getNumberOfCurrentlyMissingChunks();
     /*
      * Get the number of elements which are attached with VideoPackets
      */

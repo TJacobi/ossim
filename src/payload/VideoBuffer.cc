@@ -496,6 +496,7 @@ void VideoBuffer::printStatus()
     EV << "-- Start:\t" << m_bufferStart_seqNum     << endl;
     EV << "-- End:\t"   << m_bufferEnd_seqNum       << endl;
     EV << "-- Head:\t"  << m_head_received_seqNum   << endl;
+    EV << "-- Missing:\t"  << getNumberOfCurrentlyMissingChunks()   << endl;
 
     std::vector<STREAM_BUFFER_ELEMENT_T>::iterator iter;
     iter = m_streamBuffer.begin();
@@ -506,7 +507,7 @@ void VideoBuffer::printStatus()
        iter = m_streamBuffer.begin() + (chunkSeq % m_bufferSize_chunk);
         //STREAM_BUFFER_ELEMENT_T &elem = *iter;
         short bit = -1;
-        bit = (iter->m_chunk != NULL) ? 1 : 0;
+        bit = (inBuffer(chunkSeq)) ? 1 : 0;
         EV << bit << " ";
 
         // -- For better presenting the bit array
@@ -518,6 +519,16 @@ void VideoBuffer::printStatus()
 
 }
 
+int VideoBuffer::getNumberOfCurrentlyMissingChunks(){
+    int ret = 0;
+
+    for (int i = getBufferStartSeqNum(); i < getHeadReceivedSeqNum(); i++){
+        if (!inBuffer(i))
+            ret++;
+    }
+
+    return ret;
+}
 void VideoBuffer::fillBufferMapPacket(MeshBufferMapPacket *bmPkt)
 {
     EV << endl;
