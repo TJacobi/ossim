@@ -411,7 +411,7 @@ void MTreeBoneBase::updateOwnGossipData(){
     m_outFileDebug << "[DEBUG] " << data4->getIsBoneNode(0) << endl; m_outFileDebug.flush();
     m_outFileDebug << "[DEBUG] " << data4->getNumChildren(0) << endl; m_outFileDebug.flush();*/
 
-    m_Gossiper->setOwnData(data);
+    //m_Gossiper->setOwnData(data);
     delete data;
 }
 
