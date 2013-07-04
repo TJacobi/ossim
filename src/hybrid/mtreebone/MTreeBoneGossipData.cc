@@ -49,6 +49,8 @@ GossipUserData*  MTreeBoneGossipData::dup()const
     }
     ret->setHeadChunk( m_HeadChunk );
 
+    ret->setDistance(m_Distance);
+
     return ret;
 }
 

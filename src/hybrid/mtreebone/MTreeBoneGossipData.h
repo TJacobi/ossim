@@ -41,12 +41,15 @@ public:
 
     void setNumChildren(int stripe, int val){ if (stripe >= m_NumStripes) return; m_NumChildren[stripe] = val;}
     int getNumChildren(int stripe){ if (stripe >= m_NumStripes) return 0; return m_NumChildren[stripe];}
+
+    void setDistance(int value){m_Distance = value;}
+    int  getDistance(){return m_Distance;}
 private:
     int          m_NumStripes;
     bool*        m_IsBoneNode;
     int*         m_NumChildren;
     unsigned int m_HeadChunk; // used as a "distance"-metric
-
+    int          m_Distance;
 };
 
 #endif /* MTREEBONEGOSSIPDATA_H_ */
