@@ -34,6 +34,8 @@ MTreeBonePeerInformation::MTreeBonePeerInformation(int stripes, int buffersize) 
     sequenceNumberStart = sequenceNumberEnd = 0;
 
     requestsSend = chunksReceived = 0;
+
+    lastData = NULL;
 }
 
 MTreeBonePeerInformation::~MTreeBonePeerInformation() {
@@ -66,4 +68,10 @@ bool MTreeBonePeerInformation::inBuffer(int sequenceNumber){
         return false;
 
     return buffermap[sequenceNumber % buffersize];
+}
+
+int MTreeBonePeerInformation::getDistance(){
+    if (lastData == NULL)
+        return -1;
+    return lastData->getDistance();
 }

@@ -17,6 +17,9 @@
 #define MTREEBONEPEERINFORMATION_H_
 
 #include "MTreeBonePacket_m.h"
+#include "MTreeBoneGossipData.h"
+
+#include "MyDebugClass.h"
 
 class MTreeBonePeerInformation {
 public:
@@ -41,7 +44,22 @@ public:
     double getQuality(){
         if (requestsSend == 0) return 1;
         double quality = (double)chunksReceived / (double)requestsSend;
-        return (quality > 0.1) ? quality : 0.1;
+        return (quality < 0.1) ? 0.1 : quality;
+    }
+
+    int getDistance();
+
+    void setGossipData(MTreeBoneGossipData* data){
+        debugOut("MTreeBonePeerInformation::setGossipData 1");
+        if (lastData != NULL){
+            debugOut("MTreeBonePeerInformation::setGossipData 2");
+            delete lastData;
+            debugOut("MTreeBonePeerInformation::setGossipData 3");
+            lastData = NULL;
+        }
+        debugOut("MTreeBonePeerInformation::setGossipData 4");
+        lastData = (data == NULL) ? NULL :check_and_cast<MTreeBoneGossipData*>( data->dup() );
+        debugOut("MTreeBonePeerInformation::setGossipData 5");
     }
 private:
     unsigned int sequenceNumberStart;
@@ -53,6 +71,7 @@ private:
     bool* isbonenode;
 
     int desertedPeer;
+    MTreeBoneGossipData* lastData;
 };
 
 #endif /* MTREEBONEPEERINFORMATION_H_ */
