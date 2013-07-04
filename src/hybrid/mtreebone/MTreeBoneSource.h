@@ -29,8 +29,10 @@ protected:
     virtual void initialize(int stage);
     virtual void handleTimerMessage(cMessage *msg);
 
-    // @brief override of the base function because the source is bonenode of every stripe
-    virtual MTreeBoneBufferMapPacket* prepareBufferMap();
+    // override base function to always return true (because this is the source);
+    virtual bool isBoneNodeForStripe(int stripe);
+
+    virtual int getMyDistance();
 private:
 
 };

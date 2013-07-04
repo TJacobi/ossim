@@ -48,11 +48,10 @@ void MTreeBoneSource::handleTimerMessage(cMessage *msg){
     }
 }
 
-MTreeBoneBufferMapPacket* MTreeBoneSource::prepareBufferMap(){
-    MTreeBoneBufferMapPacket* ret = MTreeBoneBase::prepareBufferMap();// new MTreeBoneBufferMapPacket();
+bool MTreeBoneSource::isBoneNodeForStripe(int stripe){
+    return true;
+}
 
-    for (unsigned int i = 0; i < param_numStripes; i++)
-        ret->setBoneNodeForStripe(i, true);
-
-    return ret;
+int MTreeBoneSource::getMyDistance(){
+    return 0;
 }
