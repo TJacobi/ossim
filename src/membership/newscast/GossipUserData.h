@@ -39,7 +39,7 @@
 
 #include "cobject.h"
 
-class GossipUserData : cObject
+class GossipUserData : public cObject
 {
 public:
     GossipUserData();
