@@ -21,11 +21,16 @@ Define_Module(MTreeBonePeer);
 
 MTreeBonePeer::MTreeBonePeer(){
     globalUp = globalDown = 0;
+    m_PlayerPosition = 0;
 }
 
 MTreeBonePeer::~MTreeBonePeer() {
     if (timer_joinNetwork)
-        cancelAndDelete(timer_joinNetwork); timer_joinNetwork = 0;
+        cancelAndDelete(timer_joinNetwork); timer_joinNetwork = NULL;
+    if (timer_checkNeighbors)
+            cancelAndDelete(timer_checkNeighbors); timer_checkNeighbors = NULL;
+    if (timer_chunkScheduler)
+            cancelAndDelete(timer_chunkScheduler); timer_chunkScheduler = NULL;
 }
 
 void MTreeBonePeer::initialize(int stage){
@@ -48,7 +53,7 @@ void MTreeBonePeer::handleTimerMessage(cMessage *msg){
 
     if (msg == timer_joinNetwork)
     {
-        cancelEvent(timer_joinNetwork);
+        cancelAndDelete(timer_joinNetwork); timer_joinNetwork = NULL;
 
         scheduleAt(simTime() + uniform(0,5), timer_checkNeighbors);
         scheduleAt(simTime() + 1, timer_chunkScheduler);
@@ -56,7 +61,7 @@ void MTreeBonePeer::handleTimerMessage(cMessage *msg){
     else if (msg == timer_checkNeighbors){
         checkNeighbors();
         checkParents();
-        scheduleAt(simTime() + 2.5, timer_checkNeighbors);
+        scheduleAt(simTime() + 1, timer_checkNeighbors);
     }
     else if (msg == timer_chunkScheduler){
         doChunkSchedule();
@@ -90,7 +95,7 @@ void MTreeBonePeer::processPacket(cPacket *pkt){
             // TODO: make it better ... maybe head - 50% buffersize?
             //m_videoBuffer->setBufferStartSeqNum( max((check_and_cast<MTreeBoneBufferMapPacket *> (pkt))->getSequenceNumberEnd() - m_ChunksPerSecond*1 , 0));
             //m_PlayerPosition = max((check_and_cast<MTreeBoneBufferMapPacket *> (pkt))->getSequenceNumberEnd() - m_ChunksPerSecond*3 , 0);
-            m_PlayerPosition = max((check_and_cast<MTreeBoneBufferMapPacket *> (pkt))->getSequenceNumberEnd() - m_videoBuffer->getSize()/2 , 0);
+            //m_PlayerPosition = max((check_and_cast<MTreeBoneBufferMapPacket *> (pkt))->getSequenceNumberEnd() - m_videoBuffer->getSize()/2 , 0);
         }
     }
 }
@@ -128,6 +133,8 @@ void MTreeBonePeer::checkNeighbors(){
                     resp->setStripeNumber(i);
                     resp->setIsAccepted(false);
                     sendToDispatcher(resp, m_localPort, *it, m_destPort);
+
+                    m_outFileDebug << simTime().str() << " [NEIGHBOR] remove deserted peer: " << (*it).str() << " for stripe: " << i << endl;
 
                     removeNeighbor( *it, i);
                     break;
@@ -176,6 +183,9 @@ void MTreeBonePeer::checkParents(){
             m_Stripes[stripe].nextParentRequest = simTime() + 3;
             MTreeBoneParentRequestPacket* req = new MTreeBoneParentRequestPacket();
             req->setStripeNumber(stripe);
+
+            m_outFileDebug << simTime().str() << " [PARENT] send request to " << addr.str() << " for stripe: "<< req->getStripeNumber() << endl;
+
             sendToDispatcher(req, m_localPort, addr, m_destPort);
             break;
         }
@@ -184,17 +194,28 @@ void MTreeBonePeer::checkParents(){
 
 void MTreeBonePeer::handleParentRequestResponse(IPvXAddress src, MTreeBoneParentRequestResponsePacket* resp){
 
+    m_outFileDebug << simTime().str() << " [PARENT] got response from " << src.str() << " for stripe: " << resp->getStripeNumber() << " status: "<< (resp->getIsAccepted() ? "accepted" : "denied") << endl;
     if (resp->getIsAccepted())
         m_Stripes[resp->getStripeNumber()].Parent = src;
 
 }
 
 void MTreeBonePeer::doChunkSchedule(){
-    m_PlayerPosition += param_ChunkScheduleInterval;
-    if (m_PlayerPosition < getHeadSequenceNumber() - m_videoBuffer->getSize()*0.75) // adjust position ... TODO: check if this ok and how to alter player
-        m_PlayerPosition = getHeadSequenceNumber() - m_videoBuffer->getSize()/2;
+    int head = getHeadSequenceNumber();
+    // adjust position ... TODO: check if this ok and how to alter player
+    if (
+            (m_PlayerPosition < head - m_videoBuffer->getSize()*0.75)||
+            ((m_PlayerPosition > head - m_videoBuffer->getSize()*0.25) && (head > m_videoBuffer->getSize() * 0.5))
+    ){
+        m_outFileDebug << simTime().str() << " [PLAYING] adjust player position from " << m_PlayerPosition << " to " << (head - m_videoBuffer->getSize()/2) << endl;
+        m_PlayerPosition = head - m_videoBuffer->getSize()/2;
+    }
+
     for (unsigned int i = 0; i < param_numStripes; i++)
         doChunkSchedule(i);
+
+    if (head > m_ChunksPerSecond * 2) // wait till head is atleast 2 seconds ahead
+        m_PlayerPosition += param_ChunkScheduleInterval;
 }
 
 void inline addRequestToMap(std::map<IPvXAddress, genericList<int> >* list, IPvXAddress addr, unsigned int chunk){
@@ -226,7 +247,7 @@ void MTreeBonePeer::doChunkSchedule(unsigned int stripe){
 
     if (m_Stripes[stripe].isBoneNode())
         newestChunk = max(m_videoBuffer->getHeadReceivedSeqNum() - m_ChunksPerSecond, oldestChunk + m_ChunksPerSecond * 3);
-    m_outFileDebug << simTime().str() << " [doChunkSchedule] pos " << oldestChunk << endl;
+    m_outFileDebug << simTime().str() << " [doChunkSchedule] from " << oldestChunk << " to " << newestChunk << " for stripe: " << stripe << endl;
 
     IPvXAddress addr;
     MTreeBonePeerInformation* info;
@@ -252,12 +273,22 @@ void MTreeBonePeer::doChunkSchedule(unsigned int stripe){
     for (unsigned int chunk = oldestChunk; chunk < newestChunk; chunk++){
         if ( (!m_videoBuffer->inBuffer(chunk)) && (! requestIsPending(chunk) ) ) // we dont have that chunk + request is not pending
             if (getNumberOfPeersWithChunk(stripe, chunk) > 1){ // only if multiply copies exist ...
+//                m_outFileDebug << simTime().str() << " [DOWNDEBUG] chunk " << chunk << " peers " <<  getNumberOfPeersWithChunk(stripe, chunk) << endl;
+
                 std::vector<IPvXAddress>::iterator it;
                 IPvXAddress best; double bestQuality = -1;
                 for (it = m_Stripes[stripe].Neighbors.begin(); it != m_Stripes[stripe].Neighbors.end(); it++){
                     info = getPeerInformation(*it);
+//                    m_outFileDebug << simTime().str() << " [DOWNDEBUG] address " << (*it).str() << " requests " << getRequestCountInMap(requests, *it) << endl;
                     if ( (info->inBuffer(chunk)) && (getRequestCountInMap(requests, *it) < 15)){
-                        double quality = ((numberOfRequests+1) - getRequestCountInMap(requests, *it)) / (numberOfRequests+1);// * info->getQuality();
+                        double quality = ((numberOfRequests+1) - getRequestCountInMap(requests, *it));
+                                quality *= info->getQuality();
+                                quality /= (double)numberOfRequests;
+                        if ( (*it).equals(m_Stripes[stripe].Parent)) quality *= 0.25;
+
+//                        m_outFileDebug << simTime().str() << " [DOWNDEBUG] number req " << numberOfRequests << " peer quality: " << info->getQuality() << endl;
+//                        m_outFileDebug << simTime().str() << " [DOWNDEBUG] quality " << quality << endl;
+
                         if (quality > bestQuality){
                             bestQuality = quality;
                             best = *it;
