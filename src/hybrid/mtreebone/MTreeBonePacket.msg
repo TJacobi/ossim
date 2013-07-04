@@ -42,8 +42,8 @@ class PeerStreamingPacket;
 enum MTreeBonePacketType
 {
 	MTREEBONE_BUFFER_MAP = 0;
-	MTREEBONE_CHUNK_REQUEST = 1;
-	MTREEBONE_CHUNK_DENY = 2;
+	//MTREEBONE_CHUNK_REQUEST = 1;
+	//MTREEBONE_CHUNK_DENY = 2;
 	MTREEBONE_NEIGHBOR_REQUEST = 3;
 	MTREEBONE_NEIGHBOR_REQUEST_RESPONSE = 4;
 	MTREEBONE_PARENT_REQUEST = 5;
@@ -68,12 +68,12 @@ packet MTreeBoneBufferMapPacket extends MTreeBonePacket
 	bool bufferMap[];
 }
 
-packet MTreeBoneChunkRequestPacket extends MTreeBonePacket
-{
-	packetType = MTREEBONE_CHUNK_REQUEST;
-	
-	unsigned int sequenceNumber;
-}
+//packet MTreeBoneChunkRequestPacket extends MTreeBonePacket
+//{
+//	packetType = MTREEBONE_CHUNK_REQUEST;
+//	
+//	unsigned int sequenceNumber;
+//}
 
 packet MTreeBoneChunkRequestListPacket extends MTreeBonePacket
 {
@@ -82,13 +82,13 @@ packet MTreeBoneChunkRequestListPacket extends MTreeBonePacket
 	unsigned int sequenceNumbers[];
 }
 
-packet MTreeBoneChunkDenyPacket extends MTreeBonePacket
-{
-	packetType = MTREEBONE_CHUNK_DENY;
-	
-	unsigned int sequenceNumber;
-	unsigned int requestThis;
-}
+//packet MTreeBoneChunkDenyPacket extends MTreeBonePacket
+//{
+//	packetType = MTREEBONE_CHUNK_DENY;
+//	
+//	unsigned int sequenceNumber;
+//	unsigned int requestThis;
+//}
 
 packet MTreeBoneNeighborRequestPacket extends MTreeBonePacket
 {
