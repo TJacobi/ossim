@@ -16,11 +16,7 @@
 #ifndef MTREEBONEGOSSIPDATA_H_
 #define MTREEBONEGOSSIPDATA_H_
 
-
-//#define DODEBUG
-#ifdef DODEBUG
-    #include "MyDebugClass.h"
-#endif
+//#define MTreeBoneGossipData_DoCounting
 
 #include "GossipUserData.h"
 
@@ -42,14 +38,18 @@ public:
     void setNumChildren(int stripe, int val){ if (stripe >= m_NumStripes) return; m_NumChildren[stripe] = val;}
     int getNumChildren(int stripe){ if (stripe >= m_NumStripes) return 0; return m_NumChildren[stripe];}
 
-    void setDistance(int value){m_Distance = value;}
-    int  getDistance(){return m_Distance;}
+    void setDistance(int stripe, int value){m_Distance[stripe] = value;}
+    int  getDistance(int stripe){return m_Distance[stripe];}
+
+#ifdef MTreeBoneGossipData_DoCounting
+    static int count;
+#endif
 private:
     int          m_NumStripes;
     bool*        m_IsBoneNode;
     int*         m_NumChildren;
     unsigned int m_HeadChunk; // used as a "distance"-metric
-    int          m_Distance;
+    int*         m_Distance;
 };
 
 #endif /* MTREEBONEGOSSIPDATA_H_ */
