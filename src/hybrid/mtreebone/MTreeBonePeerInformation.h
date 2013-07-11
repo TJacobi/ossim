@@ -19,8 +19,6 @@
 #include "MTreeBonePacket_m.h"
 #include "MTreeBoneGossipData.h"
 
-#include "MyDebugClass.h"
-
 class MTreeBonePeerInformation {
 public:
     MTreeBonePeerInformation(int stripes, int buffersize);
