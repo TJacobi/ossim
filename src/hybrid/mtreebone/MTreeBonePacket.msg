@@ -33,7 +33,6 @@ cplusplus {{
 #include <PeerStreamingPacket_m.h>
 }}
 
-
 class PeerStreamingPacket;
 
 // Messages for the MTreeBone-Protocol
@@ -49,6 +48,7 @@ enum MTreeBonePacketType
 	MTREEBONE_PARENT_REQUEST = 5;
 	MTREEBONE_PARENT_REQUEST_RESPONSE = 6;
 	MTREEBONE_CHUNK_REQUEST_LIST = 7;
+	MTREEBONE_PEER_INFORMATION = 8;
 }
 
 packet MTreeBonePacket extends PeerStreamingPacket
@@ -64,6 +64,7 @@ packet MTreeBoneBufferMapPacket extends MTreeBonePacket
 	
 	unsigned int  sequenceNumberStart;
 	unsigned int  sequenceNumberEnd;
+	unsigned int  missingChunks;
 	bool boneNodeForStripe[];
 	bool bufferMap[];
 }
@@ -110,6 +111,7 @@ packet MTreeBoneParentRequestPacket extends MTreeBonePacket
 	packetType = MTREEBONE_PARENT_REQUEST;
 	
 	unsigned int stripeNumber;
+	bool abort;
 }
 
 packet MTreeBoneParentRequestResponsePacket extends MTreeBonePacket
@@ -118,4 +120,11 @@ packet MTreeBoneParentRequestResponsePacket extends MTreeBonePacket
 	
 	unsigned int stripeNumber;
 	bool isAccepted;
+}
+
+packet MTreeBonePeerInformationPacket extends MTreeBonePacket
+{
+	packetType = MTREEBONE_PEER_INFORMATION;
+	
+	int distance[];
 }
