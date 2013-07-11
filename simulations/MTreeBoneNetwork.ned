@@ -22,6 +22,7 @@ import inet.networklayer.autorouting.FlatNetworkConfigurator;
 
 import so.hybrid.mtreebone.MTreeBoneSourceNode;
 import so.hybrid.mtreebone.MTreeBonePeerNode;
+import so.hybrid.mtreebone.MTreeBoneStats;
 
 network MTreeBone_Homo_oneRouter_Network extends BasicNetwork
 {
@@ -71,6 +72,8 @@ network MTreeBone_Homo_oneRouter_Network extends BasicNetwork
         churnModerator: <churnModel> like IChurnModel {
             @display("p=77,171");
         }
+        
+        MTreeBoneStats: MTreeBoneStats{}
 
         globalStatistic: <statisticModule> like IStreamingStatistic {
             @display("p=77,248;i=device/disk");
