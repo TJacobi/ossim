@@ -41,7 +41,7 @@ NewscastCache::NewscastCache(int size) : cOwnedObject()
 
 NewscastCache::~NewscastCache()
 {
-    EV << "~NewscastCache()" << endl;
+    //EV << "~NewscastCache()" << endl;
     //while(!currentCache.empty()) delete currentCache.back(), currentCache.pop_back();
     /*NewscastCacheEntry* entry;
     while (currentCache.size() > 0){
@@ -49,7 +49,7 @@ NewscastCache::~NewscastCache()
         currentCache.pop_back();
         //if (entry != NULL) delete entry;
     }*/
-    EV << "~NewscastCache() -> DONE" << endl;
+    //EV << "~NewscastCache() -> DONE" << endl;
     // -- Giang
 //    std::vector<NewscastCacheEntry*>::iterator iter, old_iter;
 //    old_iter = currentCache.begin();
@@ -63,7 +63,7 @@ NewscastCache::~NewscastCache()
 //    {
 //       if (*iter) delete *iter;
 //    }
-    EV << "~NewscastCache() -> DONE 2" << endl;
+    //EV << "~NewscastCache() -> DONE 2" << endl;
     currentCache.clear();
 }
 
@@ -83,7 +83,9 @@ NewscastCache NewscastCache::dup()
     CacheSet::iterator it;
     for (it = currentCache.begin(); it != currentCache.end(); it++){
         EV << "dup2: " << (*it).getAddress() << endl;
-        ret.setEntry( (*it).getAgent(), (*it).getAddress(), (*it).getTimestamp(), (*it).getValue() );
+        GossipUserData* data = (*it).getValue();
+        ret.setEntry( (*it).getAgent(), (*it).getAddress(), (*it).getTimestamp(), data );
+        if (data != NULL) delete data;
     }
 
     return ret;
@@ -114,7 +116,9 @@ void NewscastCache::merge(NewscastCache* cache)
     // insert the entries from the new cache into the current
     CacheSet::iterator it;
     for (it = cache->currentCache.begin(); it != cache->currentCache.end(); it++){
-        setEntry( (*it).getAgent(), (*it).getAddress(), (*it).getTimestamp(), (*it).getValue() );
+        GossipUserData* data = (*it).getValue();
+        setEntry( (*it).getAgent(), (*it).getAddress(), (*it).getTimestamp(), data );
+        if (data != NULL) delete data;
     }
 
     while ((currentCache.size() > m_maxEntries) && (currentCache.size() > 0)){  // while we have more than m_maxEntries ...
@@ -144,7 +148,7 @@ void NewscastCache::printCache()
 {
     CacheSet::iterator it;
     for (it = currentCache.begin(); it != currentCache.end(); it++){
-        EV << (*it).getAgent() <<","<< (*it).getAddress() <<","<< (*it).getTimestamp() <<","<< (*it).getValue() << endl;
+        EV << (*it).getAgent() <<","<< (*it).getAddress() <<","<< (*it).getTimestamp() <<","<< (*it).hasValue() << endl;
     }
 }
 

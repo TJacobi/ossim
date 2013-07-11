@@ -335,6 +335,12 @@ void NewscastBase::receivedCache(IPvXAddress from, NewscastCache* cache)
     for (it = localAgents.begin(); it != localAgents.end(); it++){
         (*it)->onCacheReceived(from, cache);
     }
+
+    genericList<GossipListener*>::iterator iter;
+
+    for (iter = m_GossipListener.begin(); iter != m_GossipListener.end(); iter++){
+        (*iter)->onGossipDataReceived();
+    }
 }
 
 /*
