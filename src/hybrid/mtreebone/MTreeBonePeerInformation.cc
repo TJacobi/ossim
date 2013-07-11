@@ -26,28 +26,35 @@ MTreeBonePeerInformation::MTreeBonePeerInformation(int stripes, int buffersize) 
     this->stripes    = stripes;
     isbonenode       = new bool[stripes];
 
+    distance         = new int[stripes];
+
     for (int i = 0; i < buffersize; i++)
         buffermap[i] = false;
-    for (int i = 0; i < stripes; i++)
+    for (int i = 0; i < stripes; i++){
         isbonenode[i] = false;
+        distance[i]   = -1;
+    }
 
     sequenceNumberStart = sequenceNumberEnd = 0;
 
     requestsSend = chunksReceived = 0;
 
     lastData = NULL;
+    desertedPeer = simTime();
+    missingChunks = 1000;
 }
 
 MTreeBonePeerInformation::~MTreeBonePeerInformation() {
     // TODO Auto-generated destructor stub
+    delete []buffermap;
+    delete []isbonenode;
+    delete []distance;
 }
 
 void MTreeBonePeerInformation::updateFromBufferMap(MTreeBoneBufferMapPacket* pkt){
 
-    if (sequenceNumberEnd == pkt->getSequenceNumberEnd())
-        desertedPeer++;
-    else
-        desertedPeer = 0;
+    if ( (sequenceNumberEnd != pkt->getSequenceNumberEnd()) || (missingChunks > pkt->getMissingChunks()) )
+        desertedPeer = simTime();
 
     sequenceNumberStart = pkt->getSequenceNumberStart();
     sequenceNumberEnd   = pkt->getSequenceNumberEnd();
@@ -61,6 +68,8 @@ void MTreeBonePeerInformation::updateFromBufferMap(MTreeBoneBufferMapPacket* pkt
     for (int i = 0; i < min(stripes, pkt->getBoneNodeForStripeArraySize()); i++){
         isbonenode[i] = pkt->getBoneNodeForStripe(i);
     }
+
+    missingChunks = pkt->getMissingChunks();
 }
 
 bool MTreeBonePeerInformation::inBuffer(int sequenceNumber){
@@ -70,8 +79,10 @@ bool MTreeBonePeerInformation::inBuffer(int sequenceNumber){
     return buffermap[sequenceNumber % buffersize];
 }
 
-int MTreeBonePeerInformation::getDistance(){
+int MTreeBonePeerInformation::getDistance(int stripe){
+    if (distance[stripe] >= 0)
+        return distance[stripe];
     if (lastData == NULL)
         return -1;
-    return lastData->getDistance();
+    return lastData->getDistance(stripe);
 }

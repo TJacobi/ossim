@@ -28,7 +28,7 @@ public:
 
     void updateFromBufferMap(MTreeBoneBufferMapPacket* pkt);
 
-    bool isProbablyDesertedPeer(){return (desertedPeer > 10);}
+    bool isProbablyDesertedPeer(){return (simTime() - desertedPeer > 10);}
 
     int getSequenceNumberStart(){return sequenceNumberStart;}
     int getSequenceNumberEnd(){return sequenceNumberEnd;}
@@ -47,20 +47,20 @@ public:
         return (quality < 0.1) ? 0.1 : quality;
     }
 
-    int getDistance();
+    int getDistance(int stripe);
 
     void setGossipData(MTreeBoneGossipData* data){
-        debugOut("MTreeBonePeerInformation::setGossipData 1");
+
         if (lastData != NULL){
-            debugOut("MTreeBonePeerInformation::setGossipData 2");
             delete lastData;
-            debugOut("MTreeBonePeerInformation::setGossipData 3");
             lastData = NULL;
         }
-        debugOut("MTreeBonePeerInformation::setGossipData 4");
+
         lastData = (data == NULL) ? NULL :check_and_cast<MTreeBoneGossipData*>( data->dup() );
-        debugOut("MTreeBonePeerInformation::setGossipData 5");
+
     }
+
+    void setDistance(int stripe, int value){distance[stripe] = value;}
 private:
     unsigned int sequenceNumberStart;
     unsigned int sequenceNumberEnd;
@@ -70,8 +70,10 @@ private:
     int stripes;
     bool* isbonenode;
 
-    int desertedPeer;
+    SimTime desertedPeer;
     MTreeBoneGossipData* lastData;
+    int* distance;
+    int missingChunks;
 };
 
 #endif /* MTREEBONEPEERINFORMATION_H_ */
