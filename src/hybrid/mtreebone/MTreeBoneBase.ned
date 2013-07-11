@@ -52,6 +52,6 @@ simple MTreeBoneBase extends CommBase
         //double CheckPartnersIntervall @unit(s) = default(3.0s);
         //double BufferMapIntervall     @unit(s) = default(1.0s);
         
-        //bool debugOutput = default(true);
+        bool debugOutput = default(true);
         
 }
