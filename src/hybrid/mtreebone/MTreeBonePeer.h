@@ -53,7 +53,7 @@ private:
     virtual void doChunkSchedule(unsigned int stripe);
 
     int getNumberOfPeersWithChunk(int stripe, int chunk);
-    IPvXAddress getRandomPeerWithChunk(int stripe, int chunk);
+    IPvXAddress getFirstPeerWithChunk(int stripe, int chunk);
 
     bool requestIsPending(unsigned int sequenceNumber);
 };

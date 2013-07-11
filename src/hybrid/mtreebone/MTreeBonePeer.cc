@@ -19,6 +19,8 @@ inline int max(const int a, const int b) { return (a > b) ? a : b; }
 
 Define_Module(MTreeBonePeer);
 
+#include "MTreeBoneStats.h"
+
 MTreeBonePeer::MTreeBonePeer(){
     globalUp = globalDown = 0;
     m_PlayerPosition = 0;
@@ -40,9 +42,13 @@ void MTreeBonePeer::initialize(int stage){
 
     param_DisablePush = par("disablePush");
     param_ChunkScheduleInterval = par("ScheduleInterval");
+
+    MTreeBoneStats::theStats->addPeer(this);
+
     // create messages
+    std::string temp = "MTreeBonePeer_CHECK_NEIGHBORS" + m_localAddress.str();
     timer_joinNetwork    = new cMessage("MTreeBonePeer_JOIN_NETWORK");
-    timer_checkNeighbors = new cMessage("MTreeBonePeer_CHECK_NEIGHBORS");
+    timer_checkNeighbors = new cMessage(temp.c_str());
     timer_chunkScheduler = new cMessage("MTreeBonePeer_CHUNK_SCHEDULER");
 
     // schedule timers
@@ -129,12 +135,13 @@ void MTreeBonePeer::checkNeighbors(){
             for (it = m_Stripes[i].Neighbors.begin(); it != m_Stripes[i].Neighbors.end(); it++){
                 info = getPeerInformation( *it );
                 if ((info == NULL) || (info->isProbablyDesertedPeer())){
+                    m_outFileDebug << simTime().str() << " [NEIGHBOR] remove deserted peer(a): " << (*it).str() << " for stripe: " << i << endl;
                     MTreeBoneNeighborRequestResponsePacket* resp = new MTreeBoneNeighborRequestResponsePacket();
                     resp->setStripeNumber(i);
                     resp->setIsAccepted(false);
                     sendToDispatcher(resp, m_localPort, *it, m_destPort);
 
-                    m_outFileDebug << simTime().str() << " [NEIGHBOR] remove deserted peer: " << (*it).str() << " for stripe: " << i << endl;
+                    m_outFileDebug << simTime().str() << " [NEIGHBOR] remove deserted peer(b): " << (*it).str() << " for stripe: " << i << endl;
 
                     removeNeighbor( *it, i);
                     break;
@@ -152,7 +159,7 @@ void MTreeBonePeer::checkNeighbors(){
                 }
             }
         }else if(m_Stripes[i].Neighbors.size() > param_maxNOP){ // too many neighbors? shouldnt be possible ..
-
+            m_outFileDebug << simTime().str() << " [NEIGHBOR] too many neighbors .." << endl;
         }
     }
 }
@@ -169,8 +176,60 @@ void MTreeBonePeer::checkParents(){
         if (!wantToBeBoneNode(stripe)) // we dont want to be a bone node?
             continue;
 
-        if (m_Stripes[stripe].isBoneNode()) // we have a parent
+        if (m_Stripes[stripe].isBoneNode()){ // we have a parent
+            // but we can check if there is a better parent ...
+            int currentDistance = getPeerInformation( m_Stripes[stripe].Parent )->getDistance(stripe);
+            // atm only check neighbors TODO: use gossip peers [somehow direct request?]
+            genericList<IPvXAddress> possible;
+            std::vector<IPvXAddress>::iterator it;
+            for (it = m_Stripes[stripe].Neighbors.begin(); it != m_Stripes[stripe].Neighbors.end(); it++){
+                info = getPeerInformation(*it);
+                if (info == NULL) continue;
+
+                if ( (info->getDistance(stripe) < currentDistance) &&
+                        (info->getDistance(stripe) >= 0) ){
+                    m_outFileDebug << simTime().str() << " [PARENTSELECTION]a adding possible " << (*it).str() << " distance " << info->getDistance(stripe) << endl;
+                    possible.addItem(*it);
+                }
+            }
+
+            std::vector<IPvXAddress> gossipAddr = m_Gossiper->getKnownPeers();
+            for (it = gossipAddr.begin(); it != gossipAddr.end(); it++){
+                GossipUserData* userData = m_Gossiper->getPeerData(*it);
+                if (userData == NULL) continue;
+
+                //m_outFileDebug << simTime().str() << " [DEBUG] new parent selection 1" << endl;
+                MTreeBoneGossipData* data = check_and_cast<MTreeBoneGossipData*> (userData);
+                //m_outFileDebug << simTime().str() << " [DEBUG] new parent selection 2" << endl;
+                if ( (!data->getIsBoneNode(stripe)) || (data->getDistance(stripe) >= currentDistance) || (data->getDistance(stripe) < 0)){
+                    delete userData;
+                    continue;
+                }
+
+                //m_outFileDebug << simTime().str() << " [DEBUG] new parent selection 3" << endl;
+                m_outFileDebug << simTime().str() << " [PARENTSELECTION]b adding possible " << (*it).str() << " distance " << data->getDistance(stripe) << endl;
+                possible.addItem(*it);
+                delete userData;
+                //m_outFileDebug << simTime().str() << " [DEBUG] new parent selection 4" << endl;
+            }
+
+            possible.removeItem(m_localAddress);
+            if (possible.size() == 0) continue; // no better parents here ...
+
+            int pos = intrand(possible.size());
+            IPvXAddress query = possible.at(pos);
+
+            MTreeBoneParentRequestPacket* req = new MTreeBoneParentRequestPacket();
+            req->setStripeNumber(stripe);
+            req->setAbort(false);
+
+            sendToDispatcher(req, m_localPort, query, m_destPort);
+            m_Stripes[stripe].nextParentRequest = simTime() + 3;
+
+            m_outFileDebug << simTime().str() << " [PARENT] send request to " << query.str() << " for stripe: "<< req->getStripeNumber() << " _ isNeigbor? " << m_Stripes[stripe].Neighbors.containsItem(query) << endl;
+
             continue;
+        }
 
         for (unsigned int i = 0; i < m_Stripes[stripe].Neighbors.size(); i++){
             int rnd = (int)intrand(m_Stripes[stripe].Neighbors.size());
@@ -183,6 +242,7 @@ void MTreeBonePeer::checkParents(){
             m_Stripes[stripe].nextParentRequest = simTime() + 3;
             MTreeBoneParentRequestPacket* req = new MTreeBoneParentRequestPacket();
             req->setStripeNumber(stripe);
+            req->setAbort(false);
 
             m_outFileDebug << simTime().str() << " [PARENT] send request to " << addr.str() << " for stripe: "<< req->getStripeNumber() << endl;
 
@@ -195,8 +255,26 @@ void MTreeBonePeer::checkParents(){
 void MTreeBonePeer::handleParentRequestResponse(IPvXAddress src, MTreeBoneParentRequestResponsePacket* resp){
 
     m_outFileDebug << simTime().str() << " [PARENT] got response from " << src.str() << " for stripe: " << resp->getStripeNumber() << " status: "<< (resp->getIsAccepted() ? "accepted" : "denied") << endl;
-    if (resp->getIsAccepted())
-        m_Stripes[resp->getStripeNumber()].Parent = src;
+
+    int stripe = resp->getStripeNumber();
+
+    if (resp->getIsAccepted()){
+        if (!m_Stripes[stripe].Parent.isUnspecified()){
+            MTreeBoneParentRequestPacket* decline = new MTreeBoneParentRequestPacket();
+            decline->setStripeNumber(stripe);
+            decline->setAbort(true);
+            sendToDispatcher(decline, m_localPort, m_Stripes[stripe].Parent, m_destPort);
+        }
+        m_Stripes[stripe].Parent = src;
+        addNeighbor(src, stripe);
+
+        /*std::string filename = m_localAddress.str() + ".parent";
+        std::ofstream m_outWriter;
+        m_outWriter.open(filename.c_str(), std::fstream::out);
+        m_outWriter << m_localAddress.str() << " " << src.str() << " " << endl;
+        m_outWriter.flush();
+        m_outWriter.close();*/
+    }
 
 }
 
@@ -260,7 +338,7 @@ void MTreeBonePeer::doChunkSchedule(unsigned int stripe){
     for (unsigned int chunk = oldestChunk; chunk < newestChunk; chunk++){
         if ( (!m_videoBuffer->inBuffer(chunk)) && (! requestIsPending(chunk) ) ) // we dont have that chunk + request is not pending
             if (getNumberOfPeersWithChunk(stripe, chunk) == 1){ // it only exists one peer who has that chunk
-                addr = getRandomPeerWithChunk(stripe, chunk); // get that peer
+                addr = getFirstPeerWithChunk(stripe, chunk); // get that peer
                 m_outFileDebug << simTime().str() << " [DOWN] request chunk from single source " << chunk << " , " << addr.str() << endl;
                 if (getRequestCountInMap(requests, addr) < 25){
                     addRequestToMap(requests, addr, chunk);       // add him to the request list
@@ -343,7 +421,7 @@ int MTreeBonePeer::getNumberOfPeersWithChunk(int stripe, int chunk){
     return ret;
 }
 
-IPvXAddress MTreeBonePeer::getRandomPeerWithChunk(int stripe, int chunk){
+IPvXAddress MTreeBonePeer::getFirstPeerWithChunk(int stripe, int chunk){
     std::vector<IPvXAddress>::iterator it;
     MTreeBonePeerInformation* info;
 

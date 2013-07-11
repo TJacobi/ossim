@@ -17,6 +17,8 @@
 
 Define_Module(MTreeBoneSource);
 
+#include "MTreeBoneStats.h"
+
 MTreeBoneSource::MTreeBoneSource(){
 
 }
@@ -30,12 +32,15 @@ void MTreeBoneSource::initialize(int stage){
         return;
     initBase();
 
+    MTreeBoneStats::theStats->setSource(this);
     // create messages
 
 
     // schedule timers
 
 }
+
+#include "NewscastCacheEntry.h"
 
 void MTreeBoneSource::handleTimerMessage(cMessage *msg){
 
@@ -44,6 +49,12 @@ void MTreeBoneSource::handleTimerMessage(cMessage *msg){
     }
     else
     {
+#ifdef MTreeBoneGossipData_DoCounting
+        EV << " gossip count: " << MTreeBoneGossipData::count << endl;
+#endif
+#ifdef NewscastCacheEntry_DoCounting
+        EV << " newscast entry count: " << NewscastCacheEntry::count << endl;
+#endif
         MTreeBoneBase::handleTimerMessage(msg);
     }
 }
@@ -52,6 +63,6 @@ bool MTreeBoneSource::isBoneNodeForStripe(int stripe){
     return true;
 }
 
-int MTreeBoneSource::getMyDistance(){
+int MTreeBoneSource::getMyDistance(int stripe){
     return 0;
 }

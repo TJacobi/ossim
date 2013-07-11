@@ -32,7 +32,7 @@ protected:
     // override base function to always return true (because this is the source);
     virtual bool isBoneNodeForStripe(int stripe);
 
-    virtual int getMyDistance();
+    virtual int getMyDistance(int stripe);
 private:
 
 };

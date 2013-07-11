@@ -34,14 +34,29 @@ MTreeBoneBase::~MTreeBoneBase() {
     for (it = m_Neighbors.begin(); it != m_Neighbors.end(); it++)
         delete it->second;
 
+    //m_videoBuffer->removeListener(this);
+    //m_Gossiper->removeListener(this);
+
     if (debugOutput)
         m_outFileDebug.close();
 }
 
 void MTreeBoneBase::initBase() {
+
+    findNodeAddress(); // needed first for filename for debug
+
+    // DEBUG
+    debugOutput = par("debugOutput").boolValue();
+    if (debugOutput)
+    {
+        std::string filename = m_localAddress.str() + ".debug";
+        EV << "DEBUG_OPEN_FILE: " << filename << endl;
+        m_outFileDebug.open(filename.c_str(), std::fstream::out);
+        m_outFileDebug << simTime().str() << " INIT " << endl;
+    }
+
     cModule *temp;
 
-    findNodeAddress();
     m_localPort = getLocalPort();
     m_destPort = getDestPort();
 
@@ -56,6 +71,7 @@ void MTreeBoneBase::initBase() {
     param_MaxUploadFactor = par("MaxUploadFactor");
     m_UploadNextReset = 0;
     m_ChunksLeftForWindow = 0;
+    m_FreeChunksLeftForWindow = 0;
         // Get the app settings
         temp = simulation.getModuleByPath("appSetting");
         AppSettingDonet* m_appSetting = dynamic_cast<AppSettingDonet *>(temp);
@@ -66,6 +82,12 @@ void MTreeBoneBase::initBase() {
     m_DebugOutput = 0;
     param_numStripes  = m_appSetting->getNumberOfStripes();
     m_Stripes = new MTreeBoneStripeInformation[param_numStripes];
+
+    // read channel rate and adjust maxUploadFactor if necessary
+    cDatarateChannel *channel = check_and_cast<cDatarateChannel *>(getParentModule()->getParentModule()->gate("pppg$o", 0)->getTransmissionChannel());
+    double rate = channel->getDatarate() / m_appSetting->getVideoStreamBitRate();
+    param_MaxUploadFactor = (param_MaxUploadFactor > rate) ? rate : param_MaxUploadFactor;
+    m_outFileDebug << simTime().str() << " [PARAMETER] MaxUploadFactor: " << param_MaxUploadFactor << endl;
 
     checkFreeUploadListState();
     // bind to Gossip protocol
@@ -84,22 +106,13 @@ void MTreeBoneBase::initBase() {
 
 
     m_videoBuffer->addListener(this);
+    m_Gossiper->addListener(this);
 
     // timers
     timer_sendBufferMaps = new cMessage("MTreeBoneBase: TIMER_SEND_BUFFERMAPS");
 
     // schedule timers
     scheduleAt(simTime() + 1, timer_sendBufferMaps);
-
-    // DEBUG
-    debugOutput = true;//par("debugOutput").boolValue();
-    if (debugOutput)
-    {
-        std::string filename = m_localAddress.str();
-        EV << "DEBUG_OPEN_FILE: " << filename << endl;
-        m_outFileDebug.open(filename.c_str(), std::fstream::out);
-        m_outFileDebug << simTime().str() << " INIT " << endl;
-    }
 }
 
 void MTreeBoneBase::handleMessage(cMessage *msg)
@@ -144,7 +157,7 @@ void MTreeBoneBase::handleTimerMessage(cMessage *msg){
 
         updateOwnGossipData(); // update gossip data
 
-        scheduleAt(simTime() + 0.5, timer_sendBufferMaps); // reschedule
+        scheduleAt(simTime() + 1.0, timer_sendBufferMaps); // reschedule
     }
 }
 
@@ -157,7 +170,7 @@ void MTreeBoneBase::processPacket(cPacket *pkt)
     MTreeBonePeerInformation* info;
 
     EV << "received packet: " << csp->getPacketType() << " @ " << m_localAddress.str() << endl;
-    m_outFileDebug << simTime().str() << " [DEBUG] received packet " << csp->getPacketType() << endl;
+    m_outFileDebug << simTime().str() << " [DEBUG] received packet " << csp->getPacketType() << " from " << src.str() << endl;
 
     switch (csp->getPacketType()){
         case MTREEBONE_NEIGHBOR_REQUEST:
@@ -166,9 +179,10 @@ void MTreeBoneBase::processPacket(cPacket *pkt)
         case MTREEBONE_NEIGHBOR_REQUEST_RESPONSE:
             processNeighborRequestResponse(src, check_and_cast<MTreeBoneNeighborRequestResponsePacket *> (pkt));
             break;
-        case MTREEBONE_CHUNK_REQUEST:
-            handleChunkRequest(src, check_and_cast<MTreeBoneChunkRequestPacket *> (pkt));
-            break;
+//        case MTREEBONE_CHUNK_REQUEST:
+//            // support removed
+//            //handleChunkRequest(src, check_and_cast<MTreeBoneChunkRequestPacket *> (pkt));
+//            break;
         case MTREEBONE_CHUNK_REQUEST_LIST:
             handleChunkRequestList(src, check_and_cast<MTreeBoneChunkRequestListPacket *> (pkt));
             break;
@@ -176,9 +190,17 @@ void MTreeBoneBase::processPacket(cPacket *pkt)
             info = getPeerInformation(src);
             if (info != NULL)
                 info->updateFromBufferMap(check_and_cast<MTreeBoneBufferMapPacket *> (pkt));
+            if (info != NULL)
+                m_outFileDebug << simTime().str() << " [DEBUG] head= " << info->getSequenceNumberEnd() << endl;
             break;
         case MTREEBONE_PARENT_REQUEST:
             handleParentRequest(src, check_and_cast<MTreeBoneParentRequestPacket*> (pkt));
+            break;
+        case MTREEBONE_PEER_INFORMATION:
+            info = getPeerInformation(src);
+            if (info != NULL)
+                for (unsigned int i = 0; i < param_numStripes; i++)
+                    info->setDistance(i, (check_and_cast<MTreeBonePeerInformationPacket*> (pkt))->getDistance(i) );
             break;
         default:
         {
@@ -187,65 +209,30 @@ void MTreeBoneBase::processPacket(cPacket *pkt)
     }
 }
 
-void MTreeBoneBase::handleChunkRequest(IPvXAddress src, MTreeBoneChunkRequestPacket* pkt){
-    if (m_UploadNextReset < simTime()){ // Bandwidth limit rest?
-        m_UploadNextReset = simTime() + 1;
-        m_DebugOutput += (int)m_ChunksLeftForWindow;
-
-        m_ChunksLeftForWindow = m_ChunksPerSecond * ((param_MaxUploadFactor >= 1) ? param_MaxUploadFactor - 1 : param_MaxUploadFactor); // TODO: subtract children
-    }
-
-    EV << endl << endl << "MTreeBoneBase::handleChunkRequest @ " << m_localAddress.str() << " from " << src.str() << " -> " << pkt->getSequenceNumber() << endl << endl << endl;
-
-    m_outFileDebug << simTime().str() << " [UP] handling chunk request from " << src.str() << " sequencenumber: " << pkt->getSequenceNumber() << endl;
-
-    if ( (param_MaxUploadFactor >= 1) && (m_videoBuffer->isInBuffer(pkt->getSequenceNumber())) && (m_FreeUploadList.containsItem(pkt->getSequenceNumber())) ){
-        m_ChunksUploaded++;
-        m_FreeUploadList.removeItem(pkt->getSequenceNumber());
-
-        m_outFileDebug << simTime().str() << " [UP] is in free upload list!" << endl;
-        m_forwarder->sendChunk(pkt->getSequenceNumber(), src, m_destPort);
-    }else if ((m_ChunksLeftForWindow > 0) && (m_videoBuffer->isInBuffer(pkt->getSequenceNumber()))){ // bandwidth left + do we have that chunk?
-        m_ChunksLeftForWindow--;
-        m_ChunksUploaded++;
-
-        m_outFileDebug << simTime().str() << " [UP] sending from limit, left: " << m_ChunksLeftForWindow << endl;
-        m_forwarder->sendChunk(pkt->getSequenceNumber(), src, m_destPort);
-    }else{  // send deny
-        MTreeBoneChunkDenyPacket* resp = new MTreeBoneChunkDenyPacket();
-        resp->setSequenceNumber(pkt->getSequenceNumber());
-
-        if (m_FreeUploadList.size() > 0){
-            int rnd = (int)intrand(m_FreeUploadList.size());
-            resp->setRequestThis(m_FreeUploadList.at(rnd));
-        }else {
-            resp->setRequestThis(0);
-        }
-
-        m_outFileDebug << simTime().str() << " [UP] denied, limit left: " << m_ChunksLeftForWindow << " inBuffer: " << m_videoBuffer->isInBuffer(pkt->getSequenceNumber()) << endl;
-        sendToDispatcher(resp, m_localPort, src, m_destPort);
-
-        if (!m_videoBuffer->isInBuffer(pkt->getSequenceNumber()))
-            EV << " handleChunkRequest: NOT IN BUFFER " << pkt->getSequenceNumber() << " , " << m_videoBuffer->getBufferStartSeqNum() << " - " << m_videoBuffer->getHeadReceivedSeqNum() << endl;
-
-        m_ChunksDenied++;
-    }
-}
-
 void MTreeBoneBase::handleParentRequest(IPvXAddress src, MTreeBoneParentRequestPacket* pkt){
-    MTreeBoneParentRequestResponsePacket* resp = new MTreeBoneParentRequestResponsePacket();
-
     int stripe = pkt->getStripeNumber();
 
+    if (pkt->getAbort()){ // peer doesnt want to be our children anymore
+        m_Stripes[stripe].Children.removeItem(src);
+        return;
+    }
+
+    MTreeBoneParentRequestResponsePacket* resp = new MTreeBoneParentRequestResponsePacket();
     resp->setStripeNumber(stripe);
-    resp->setIsAccepted( ((param_MaxUploadFactor - m_Stripes[stripe].Children.size()) > 1) || (m_Stripes[stripe].Children.containsItem(src)) ); // same max number of children for all stripes TODO: think about making it 1 + x ?
+
+    // same max number of children for all stripes TODO: think about making it 1 + x ?
+    bool accepted = ((param_MaxUploadFactor - m_Stripes[stripe].Children.size()) > 1) || (m_Stripes[stripe].Children.containsItem(src));
+    accepted = accepted && isBoneNodeForStripe(stripe);
+
+    resp->setIsAccepted( accepted );
 
     if ( (resp->getIsAccepted()) && (!(m_Stripes[stripe].Children.containsItem(src))) ){
+        addNeighbor(src, stripe);
         m_Stripes[stripe].Children.addItem(src);
         checkFreeUploadListState();
     }
 
-    m_outFileDebug << simTime().str() << " [PARENTING] got request from " << src.str() << " status: "<< (resp->getIsAccepted() ? "accepted" : "denied") << endl;
+    m_outFileDebug << simTime().str() << " [PARENTING] got request from " << src.str() << " for stripe: " << resp->getStripeNumber() << " status: "<< (resp->getIsAccepted() ? "accepted" : "denied") << " children: " << m_Stripes[stripe].Children.size() << endl;
 
     sendToDispatcher(resp, m_localPort, src, m_destPort);
 }
@@ -256,7 +243,7 @@ MTreeBoneBufferMapPacket* MTreeBoneBase::prepareBufferMap(){
     // set bone state
     ret->setBoneNodeForStripeArraySize(param_numStripes);
     for (unsigned int i = 0; i < param_numStripes; i++)
-        ret->setBoneNodeForStripe(i, m_Stripes[i].isBoneNode());
+        ret->setBoneNodeForStripe(i, isBoneNodeForStripe(i));
 
     // set buffermap
     ret->setBufferMapArraySize(m_videoBuffer->getSize());
@@ -266,6 +253,7 @@ MTreeBoneBufferMapPacket* MTreeBoneBase::prepareBufferMap(){
         ret->setBufferMap(i % ret->getBufferMapArraySize(), m_videoBuffer->inBuffer(i));
     ret->setSequenceNumberStart(m_videoBuffer->getBufferStartSeqNum());
     ret->setSequenceNumberEnd(m_videoBuffer->getHeadReceivedSeqNum());
+    ret->setMissingChunks(m_videoBuffer->getNumberOfCurrentlyMissingChunks());
 
     return ret;
 }
@@ -361,9 +349,6 @@ MTreeBonePeerInformation* MTreeBoneBase::getPeerInformation(IPvXAddress addr){
 }
 
 void MTreeBoneBase::onNewChunk(IPvXAddress src, int sequenceNumber){
-    if (m_FreeUploadListEnabled)
-        m_FreeUploadList.addItem(sequenceNumber);
-
     // takeover context, because we may send something
     cComponent* origContext = simulation.getContext();
     simulation.setContext(this);
@@ -371,12 +356,21 @@ void MTreeBoneBase::onNewChunk(IPvXAddress src, int sequenceNumber){
     int stripe = sequenceNumber % param_numStripes;
     std::vector<IPvXAddress>::iterator it;
 
+    bool count = false;
+
     for ( it = m_Stripes[stripe].Children.begin(); it != m_Stripes[stripe].Children.end(); it++){
         m_ChunksUploaded++;
+        m_ChunksLeftForWindow--;
 
         m_outFileDebug << simTime().str() << " [UP] forwarding received chunk " << sequenceNumber << " to " << (*it).str() << endl;
         m_forwarder->sendChunk(sequenceNumber, *it, m_destPort);
+        count = true;
     }
+
+    if (count)
+        m_FreeChunksLeftForWindow--; //since we are forwarding a "unique" chunk
+    else if (m_FreeUploadListEnabled) // add it to the list
+        m_FreeUploadList.addItem(sequenceNumber);
 
     // reset context
     simulation.setContext(origContext);
@@ -401,17 +395,32 @@ void MTreeBoneBase::updateOwnGossipData(){
 
     data->setHeadChunk(m_videoBuffer->getHeadReceivedSeqNum());
     for (unsigned int stripe = 0; stripe < param_numStripes; stripe++){
-        data->setIsBoneNode(stripe, m_Stripes[stripe].isBoneNode());
+        data->setIsBoneNode(stripe, isBoneNodeForStripe(stripe));
         data->setNumChildren(stripe, m_Stripes[stripe].Children.size());
     }
-    /*GossipUserData* data2 = data->dup();
-    GossipUserData* data3 = data2->dup();*/
 
-    /*m_outFileDebug << "[DEBUG] " << data4->getHeadChunk() << endl; m_outFileDebug.flush();
-    m_outFileDebug << "[DEBUG] " << data4->getIsBoneNode(0) << endl; m_outFileDebug.flush();
-    m_outFileDebug << "[DEBUG] " << data4->getNumChildren(0) << endl; m_outFileDebug.flush();*/
+    MTreeBonePeerInformationPacket* peerInfo = new MTreeBonePeerInformationPacket();
+    peerInfo->setDistanceArraySize(param_numStripes);
+    for (unsigned int i = 0; i < param_numStripes; i++)
+        peerInfo->setDistance(i, getMyDistance(i));
 
-    //m_Gossiper->setOwnData(data);
+    genericList<IPvXAddress> children; genericList<IPvXAddress>::iterator it;
+    for (unsigned int i = 0; i < param_numStripes; i++)
+        for (it = m_Stripes[i].Children.begin(); it != m_Stripes[i].Children.end(); it++)
+            children.addItem(*it);
+
+    for (it = children.begin(); it != children.end(); it++)
+        sendToDispatcher(peerInfo->dup(), m_localPort, *it, m_destPort);
+
+    delete peerInfo;
+
+    for (unsigned int i = 0; i < param_numStripes; i++)
+        m_outFileDebug << simTime().str() << " [DEBUG_GOSSIP] my Distance: stripe " << i << " = " << getMyDistance(i) << endl;
+
+    for (unsigned int i = 0; i < param_numStripes; i++)
+        data->setDistance(i, getMyDistance(i));
+
+    m_Gossiper->setOwnData(data);
     delete data;
 }
 
@@ -420,7 +429,8 @@ void MTreeBoneBase::handleChunkRequestList(IPvXAddress src, MTreeBoneChunkReques
         m_UploadNextReset = simTime() + 1;
         m_DebugOutput += (int)m_ChunksLeftForWindow;
 
-        m_ChunksLeftForWindow = m_ChunksPerSecond * ((param_MaxUploadFactor >= 1) ? param_MaxUploadFactor - 1 : param_MaxUploadFactor); // TODO: subtract children
+        m_ChunksLeftForWindow     = m_ChunksPerSecond * param_MaxUploadFactor;// ((param_MaxUploadFactor >= 1) ? param_MaxUploadFactor - 1 : param_MaxUploadFactor); // TODO: subtract children
+        m_FreeChunksLeftForWindow = (param_MaxUploadFactor >= 1) ? m_ChunksPerSecond : 0;
     }
 
     EV << endl << endl << "MTreeBoneBase::handleChunkRequestList @ " << m_localAddress.str() << " from " << src.str() << " -> " << pkt->getSequenceNumbersArraySize() << endl << endl << endl;
@@ -431,39 +441,27 @@ void MTreeBoneBase::handleChunkRequestList(IPvXAddress src, MTreeBoneChunkReques
         int seqNumber = pkt->getSequenceNumbers(i);
         m_outFileDebug << simTime().str() << " [UP] handling chunk request from " << src.str() << " sequencenumber: " << seqNumber << endl;
 
-        if ( (param_MaxUploadFactor >= 1) && (m_videoBuffer->isInBuffer(seqNumber)) && (m_FreeUploadList.containsItem(seqNumber)) ){
-            m_ChunksUploaded++;
-            m_FreeUploadList.removeItem(seqNumber);
+        // upload left + in Buffer?
+        if ( (m_ChunksLeftForWindow > 0) && (m_videoBuffer->isInBuffer(seqNumber)) ){
+            //m_FreeChunksLeftForWindow
+            if ( m_FreeUploadList.containsItem(seqNumber) ){
+                m_ChunksUploaded++;
+                m_FreeUploadList.removeItem(seqNumber);
+                m_FreeChunksLeftForWindow--;
 
-            m_outFileDebug << simTime().str() << " [UP] is in free upload list!" << endl;
-            m_forwarder->sendChunk(seqNumber, src, m_destPort);
-            globalUp++;
-        }else if ((m_ChunksLeftForWindow > 0) && (m_videoBuffer->isInBuffer(seqNumber))){ // bandwidth left + do we have that chunk?
-            m_ChunksLeftForWindow--;
-            m_ChunksUploaded++;
+                m_outFileDebug << simTime().str() << " [UP] is in free upload list!" << endl;
+                m_forwarder->sendChunk(seqNumber, src, m_destPort);
+                globalUp++;
+            }else if (m_ChunksLeftForWindow > m_FreeChunksLeftForWindow){
+                m_ChunksLeftForWindow--;
+                m_ChunksUploaded++;
 
-            m_outFileDebug << simTime().str() << " [UP] sending from limit, left: " << m_ChunksLeftForWindow << endl;
-            m_forwarder->sendChunk(seqNumber, src, m_destPort);
-            globalUp++;
-        }else{  // send deny
-            /*MTreeBoneChunkDenyPacket* resp = new MTreeBoneChunkDenyPacket();
-            resp->setSequenceNumber(seqNumber);
-
-            if (m_FreeUploadList.size() > 0){
-                int rnd = (int)intrand(m_FreeUploadList.size());
-                resp->setRequestThis(m_FreeUploadList.at(rnd));
-            }else {
-                resp->setRequestThis(0);
-            }*/
-
+                m_outFileDebug << simTime().str() << " [UP] sending from limit, left: " << m_ChunksLeftForWindow << ", " << m_FreeChunksLeftForWindow << endl;
+                m_forwarder->sendChunk(seqNumber, src, m_destPort);
+                globalUp++;
+            }
+        }else{  // denied
             m_outFileDebug << simTime().str() << " [UP] denied, limit left: " << m_ChunksLeftForWindow << " inBuffer: " << m_videoBuffer->isInBuffer(seqNumber) << endl;
-            /*sendToDispatcher(resp, m_localPort, src, m_destPort);
-
-            if (m_videoBuffer->isInBuffer(seqNumber))
-                ;
-            else
-                EV << " handleChunkRequest: NOT IN BUFFER " << seqNumber << " , " << m_videoBuffer->getBufferStartSeqNum() << " - " << m_videoBuffer->getHeadReceivedSeqNum() << endl;
-             */
 
             m_ChunksDenied++;
         }
@@ -497,4 +495,58 @@ int MTreeBoneBase::getHeadSequenceNumber(){
     }
 
     return ret;
+}
+
+bool MTreeBoneBase::isBoneNodeForStripe(int stripe){
+    return m_Stripes[stripe].isBoneNode();
+}
+
+int MTreeBoneBase::getMyDistance(int stripe){
+    int ret = -1;
+
+    // "pull"-distance
+    /*
+    std::map<IPvXAddress, MTreeBonePeerInformation*>::iterator it;
+    for (it = m_Neighbors.begin(); it != m_Neighbors.end(); it++){
+        int dist = it->second->getDistance();
+        if ( (dist >= 0) &&
+             ( (dist < ret) || (ret < 0) ) )
+            ret = dist;
+    }
+    */
+
+    // "push"-distance
+    MTreeBonePeerInformation* info;
+    //for (unsigned int i = 0; i < param_numStripes; i++){
+    if (!m_Stripes[stripe].Parent.isUnspecified()){
+
+        info = getPeerInformation(m_Stripes[stripe].Parent);
+        if (info != NULL){
+            int dist = info->getDistance(stripe);
+            if ( (dist >= 0) &&
+                 ( (dist < ret) || (ret < 0) ) )
+                ret = dist;
+        }
+    }
+    //}
+
+    return (ret < 0) ? -1 : ret + 1;
+}
+
+void MTreeBoneBase::onGossipDataReceived(){
+    std::map<IPvXAddress, MTreeBonePeerInformation*>::iterator it;
+    GossipUserData* data;
+
+    m_outFileDebug << simTime().str() << " [DEBUG_GOSSIP] data received!" << endl;
+
+    for (it = m_Neighbors.begin(); it != m_Neighbors.end(); it++){
+        m_outFileDebug << simTime().str() << " [DEBUG_GOSSIP] data received! 1" << endl;
+        data = m_Gossiper->getPeerData(it->first);
+
+        if (data != NULL){
+            m_outFileDebug << simTime().str() << " [DEBUG_GOSSIP] data received for " << it->first.str() << endl;
+            it->second->setGossipData(check_and_cast<MTreeBoneGossipData*> (data) );
+            delete data;
+        }
+    }
 }

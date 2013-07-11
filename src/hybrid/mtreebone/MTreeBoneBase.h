@@ -26,10 +26,11 @@
 #include "MTreeBoneStripeInformation.h"
 #include "MTreeBonePeerInformation.h"
 #include "VideoBufferListener.h"
+#include "GossipListener.h"
 
 #include <fstream>
 
-class MTreeBoneBase : public CommBase, public VideoBufferListener {
+class MTreeBoneBase : public CommBase, public VideoBufferListener, public GossipListener {
 public:
     MTreeBoneBase();
     virtual ~MTreeBoneBase();
@@ -37,6 +38,11 @@ public:
     void handleMessage(cMessage *msg);
 
     virtual void onNewChunk(IPvXAddress src, int sequenceNumber);
+
+    virtual void onGossipDataReceived();
+
+    IPvXAddress getAddress(){ return m_localAddress; }
+    IPvXAddress getParent(int stripe){ return m_Stripes[stripe].Parent; }
 protected:
     GossipProtocolWithUserData* m_Gossiper;
     void updateOwnGossipData();
@@ -59,6 +65,10 @@ protected:
 
     void processNeighborRequest(IPvXAddress src, MTreeBoneNeighborRequestPacket* pkt);
     void processNeighborRequestResponse(IPvXAddress src, MTreeBoneNeighborRequestResponsePacket* pkt);
+
+    virtual bool isBoneNodeForStripe(int stripe);
+
+    virtual int getMyDistance(int stripe);
 protected:
     int m_localPort, m_destPort;
 
@@ -81,6 +91,7 @@ protected:
     double m_ChunksPerSecond;
     // @brief chunks left for this window
     double m_ChunksLeftForWindow;
+    double m_FreeChunksLeftForWindow;
 
     bool m_FreeUploadListEnabled;
     genericList<int> m_FreeUploadList;
@@ -89,7 +100,7 @@ protected:
     unsigned int m_ChunksDenied;
     unsigned int m_DebugOutput;
 
-    void handleChunkRequest(IPvXAddress src, MTreeBoneChunkRequestPacket* pkt);
+    //void handleChunkRequest(IPvXAddress src, MTreeBoneChunkRequestPacket* pkt);
     void handleChunkRequestList(IPvXAddress src, MTreeBoneChunkRequestListPacket* pkt);
     void checkFreeUploadListState();
 
