@@ -34,15 +34,25 @@
 
 #include "NewscastCacheEntry.h"
 
+#ifdef NewscastCacheEntry_DoCounting
+int NewscastCacheEntry::count = 0;
+#endif
+
 NewscastCacheEntry::NewscastCacheEntry()
 {
     m_value = NULL;
     m_address = IPvXAddress("0.0.0.0");
+#ifdef NewscastCacheEntry_DoCounting
+    NewscastCacheEntry::count++;
+#endif
 }
 
 NewscastCacheEntry::~NewscastCacheEntry()
 {
-    if (m_value) delete m_value;
+    if (m_value != NULL) delete m_value;
+#ifdef NewscastCacheEntry_DoCounting
+    NewscastCacheEntry::count--;
+#endif
 }
 
 long NewscastCacheEntry::getEstimatedSizeInBits()
@@ -56,3 +66,5 @@ long NewscastCacheEntry::getEstimatedSizeInBits()
 
     return ret;
 }
+
+

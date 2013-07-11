@@ -41,6 +41,8 @@
 #include "simtime_t.h"
 #include "GossipUserData.h"
 
+//#define NewscastCacheEntry_DoCounting
+
 class NewscastCacheEntry
 {
 public:
@@ -48,24 +50,55 @@ public:
     virtual ~NewscastCacheEntry();
 
     // Getter
-    IPvXAddress     getAddress()  { return m_address;}
-    simtime_t       getTimestamp(){ return m_timestamp;}
-    std::string     getAgent()    { return m_agent;}
-    GossipUserData* getValue()    { return m_value;}
-
+    IPvXAddress     getAddress()        { return m_address;}
+    simtime_t       getTimestamp()      { return m_timestamp;}
+    std::string     getAgent()          { return m_agent;}
+    /*
+     * returns a COPY of the current value or NULL if empty
+     */
+    GossipUserData* getValue()          { return (m_value != NULL) ? m_value->dup() : NULL;}
+    /*
+     * returns the pointer to the current value
+     */
+    GossipUserData* getValuePointer()   { return m_value;}
+    bool            hasValue()          { return (m_value != NULL); }
+#ifdef NewscastCacheEntry_DoCounting
+    static int count;
+#endif
     // Setter
     void setAddress(IPvXAddress addr)       { m_address = addr;}
     void setTimestamp(simtime_t timestamp)  { m_timestamp = timestamp;}
     void setAgent(std::string agent)        { m_agent = agent;}
     void setValue(GossipUserData* value)    {
         if (m_value) delete m_value;
-        m_value = value;}
+        m_value = (value == NULL) ? NULL : value->dup();}
 
     // estimate
     /*
      * returns a estimated size in bytes of this entry
      */
     long getEstimatedSizeInBits();
+
+    // copy constructor
+    NewscastCacheEntry(const NewscastCacheEntry &cSource)
+    {
+        m_address = cSource.m_address;
+        m_timestamp = cSource.m_timestamp;
+        m_agent = cSource.m_agent;
+        setValue(cSource.m_value);
+#ifdef NewscastCacheEntry_DoCounting
+        NewscastCacheEntry::count++;
+#endif
+    }
+    // assignment operator
+    NewscastCacheEntry& operator= (const NewscastCacheEntry &cSource){
+        m_address = cSource.m_address;
+        m_timestamp = cSource.m_timestamp;
+        m_agent = cSource.m_agent;
+        setValue(cSource.m_value);
+
+        return *this;
+    }
 protected:
     IPvXAddress         m_address;
     simtime_t           m_timestamp;
