@@ -39,6 +39,8 @@
 
 #include "IPvXAddress.h"
 #include "MembershipBase.h"
+#include "GossipListener.h"
+#include "genericList.h"
 
 //class GossipProtocol {
 class GossipProtocol : public MembershipBase
@@ -62,6 +64,15 @@ public:
     virtual void incrementNPartner(const IPvXAddress &addr) = 0;
     virtual void decrementNPartner(const IPvXAddress &addr) = 0;
 
+    // listening support
+    void addListener(GossipListener* listener){
+        m_GossipListener.addItem(listener);
+    }
+    void removeListener(GossipListener* listener){
+        m_GossipListener.removeItem(listener);
+    }
+protected:
+    genericList<GossipListener*> m_GossipListener;
 };
 
 #endif /* GOSSIPPROTOCOL_H_ */
