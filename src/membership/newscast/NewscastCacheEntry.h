@@ -82,9 +82,10 @@ public:
     // copy constructor
     NewscastCacheEntry(const NewscastCacheEntry &cSource)
     {
-        m_address = cSource.m_address;
+        m_address   = cSource.m_address;
         m_timestamp = cSource.m_timestamp;
-        m_agent = cSource.m_agent;
+        m_agent     = cSource.m_agent;
+        m_value     = NULL;
         setValue(cSource.m_value);
 #ifdef NewscastCacheEntry_DoCounting
         NewscastCacheEntry::count++;
@@ -92,9 +93,10 @@ public:
     }
     // assignment operator
     NewscastCacheEntry& operator= (const NewscastCacheEntry &cSource){
-        m_address = cSource.m_address;
+        m_address   = cSource.m_address;
         m_timestamp = cSource.m_timestamp;
-        m_agent = cSource.m_agent;
+        m_agent     = cSource.m_agent;
+        m_value     = NULL;
         setValue(cSource.m_value);
 
         return *this;
