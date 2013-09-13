@@ -49,8 +49,8 @@ public:
     GossipProtocol();
     virtual ~GossipProtocol();
 
-    //virtual bool joinNetwork(IPvXAddress bootstrap = "0.0.0.0") = 0;
-    //virtual void leaveNetwork();
+    virtual bool joinNetwork(IPvXAddress bootstrap = "0.0.0.0") = 0;
+    virtual void leaveNetwork();
 
     //virtual IPvXAddress getRandomPeer();
     virtual IPvXAddress getRandomPeer(IPvXAddress notThisAddress);

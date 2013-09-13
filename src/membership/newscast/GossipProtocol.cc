@@ -46,9 +46,9 @@ GossipProtocol::~GossipProtocol()
 //bool GossipProtocol::joinNetwork(IPvXAddress bootstrap){
 //    return false;
 //}
-//void GossipProtocol::leaveNetwork(){
+void GossipProtocol::leaveNetwork(){
 
-//}
+}
 
 //IPvXAddress GossipProtocol::getRandomPeer(){
 //    return "0.0.0.0";
