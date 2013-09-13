@@ -29,9 +29,6 @@ public:
 
     virtual long getSizeInBits();
 
-    void setHeadChunk(unsigned int number){m_HeadChunk = number;}
-    unsigned int getHeadChunk(){return m_HeadChunk;}
-
     void setIsBoneNode(int stripe, bool val){ if (stripe >= m_NumStripes) return; m_IsBoneNode[stripe] = val;}
     bool getIsBoneNode(int stripe){ if (stripe >= m_NumStripes) return false; return m_IsBoneNode[stripe];}
 
@@ -48,7 +45,6 @@ private:
     int          m_NumStripes;
     bool*        m_IsBoneNode;
     int*         m_NumChildren;
-    unsigned int m_HeadChunk; // used as a "distance"-metric
     int*         m_Distance;
 };
 
