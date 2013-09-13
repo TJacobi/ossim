@@ -68,6 +68,16 @@ public:
 
         return false;
     }
+
+    A_TYPE getRandomItem(){
+        if (genericList<A_TYPE>::size() <= 0){
+            A_TYPE null;
+            return null;
+        }
+
+        int aRandomIndex = (int)intrand(genericList<A_TYPE>::size());
+        return genericList<A_TYPE>::at(aRandomIndex);
+    }
 };
 
 #endif /* GENERICLIST_H_ */
