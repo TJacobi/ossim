@@ -46,12 +46,14 @@ NewscastBase::NewscastBase()
 {
     m_ownValue = NULL;
     m_Active = false;
+    timer_JoinNetwork = NULL;
+    timer_ExchangeCache = NULL;
 }
 
 NewscastBase::~NewscastBase()
 {
-    if (timer_JoinNetwork)   delete cancelEvent(timer_JoinNetwork);
-    if (timer_ExchangeCache) delete cancelEvent(timer_ExchangeCache);
+    if (timer_JoinNetwork)   cancelAndDelete(timer_JoinNetwork); timer_JoinNetwork = NULL;
+    if (timer_ExchangeCache) cancelAndDelete(timer_ExchangeCache); timer_ExchangeCache = NULL;
 
     if (m_ownValue) delete m_ownValue;
 
@@ -80,19 +82,23 @@ void NewscastBase::initialize(int stage)
     m_cache.setMaxSize((int)par("cacheSize"));
 
     // create the messages used for timer actions
-    timer_ExchangeCache = new cMessage("Newscast: ExchangeCacheTimer");
-    timer_JoinNetwork   = new cMessage("Newscast: JoinNetworkTimer");
+    if (timer_ExchangeCache == NULL)
+        timer_ExchangeCache = new cMessage("Newscast: ExchangeCacheTimer");
+    if (timer_JoinNetwork == NULL)
+        timer_JoinNetwork   = new cMessage("Newscast: JoinNetworkTimer");
 
     // schedule a timer to join the netwrok
     //scheduleAt(simTime() + m_churn->getArrivalTime() , timer_JoinNetwork);
-    scheduleAt( uniform(0,5) , timer_JoinNetwork);
+    if (par("autoJoinNetwork").boolValue())
+        scheduleAt( uniform(0,5) , timer_JoinNetwork);
 }
 
 void NewscastBase::handleMessage(cMessage *msg)
 {
     if (msg == timer_JoinNetwork){  // join the network
 
-        joinNetwork();
+        doJoinNetwork();
+        //joinNetwork();
 
     }else if (msg == timer_ExchangeCache){  // regular cache-exchange ...
 
@@ -399,23 +405,37 @@ GossipUserData* NewscastBase::getPeerData(IPvXAddress addr)
 }
 // <-- Interface: GossipProtocolWithUserData
 
-// Interface: GossipProtocol -->
-bool NewscastBase::joinNetwork(IPvXAddress bootstrap)
-{
+
+void NewscastBase::doJoinNetwork(IPvXAddress bootstrap){
     m_apTable->addAddress(m_localAddress);
     m_Active = true;
 
+    cComponent* origContext = simulation.getContext(); // this function can be called by other modules so we need to switch contexts
+    simulation.setContext(this);
+
     doBootstrap(bootstrap);
+    if (timer_ExchangeCache == NULL)
+        timer_ExchangeCache = new cMessage("Newscast: ExchangeCacheTimer");
     scheduleAt(simTime(), timer_ExchangeCache);
+
+    simulation.setContext(origContext);
+}
+
+// Interface: GossipProtocol -->
+bool NewscastBase::joinNetwork(IPvXAddress bootstrap)
+{
+    if (m_Active) return false;
+
+    doJoinNetwork(bootstrap);
 
     return true;
 }
 
-//void NewscastBase::leaveNetwork(){
-//    cancelEvent(timer_ExchangeCache);
-//    m_Active = false;
-//    m_apTable->deletePeerAddress(m_localAddress);
-//}
+void NewscastBase::leaveNetwork(){
+    if (timer_ExchangeCache) cancelAndDelete(timer_ExchangeCache); timer_ExchangeCache = NULL;
+    m_Active = false;
+    m_apTable->deletePeerAddress(m_localAddress);
+}
 
 //IPvXAddress NewscastBase::getRandomPeer(){
 //    NewscastCacheEntry entry = m_cache.getRandomEntry();

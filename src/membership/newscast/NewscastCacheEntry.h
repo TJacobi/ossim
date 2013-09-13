@@ -96,7 +96,7 @@ public:
         m_address   = cSource.m_address;
         m_timestamp = cSource.m_timestamp;
         m_agent     = cSource.m_agent;
-        m_value     = NULL;
+        //m_value     = NULL;
         setValue(cSource.m_value);
 
         return *this;

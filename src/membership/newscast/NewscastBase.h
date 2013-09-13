@@ -76,7 +76,7 @@ public:
 
     // Interface: GossipProtocol -->
     bool joinNetwork(IPvXAddress bootstrap = "0.0.0.0");
-    //void leaveNetwork();
+    void leaveNetwork();
 
     // -- obsolete?
     // @brief returns a random Peer address from the local cache
@@ -107,6 +107,8 @@ protected:
     ActivePeerTable *m_apTable;
     Dispatcher *m_dispatcher;
     NewscastStatistic* m_statistics;
+
+    void doJoinNetwork(IPvXAddress bootstrap = "0.0.0.0");
 
     // -- For communicating via UDP
     int m_localPort, m_destPort;

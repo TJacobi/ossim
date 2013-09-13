@@ -45,6 +45,7 @@ simple NewscastBase extends MembershipBase
         // intervall for cache exchanges
         double exchangeCacheIntervall @unit(s) = default(5.0s);
  
+        bool autoJoinNetwork = default(false);
 //    gates:
 //        // -- Gates to the Dispatcher module
 //        input dpIn @labels(DpControlInfo/up);
