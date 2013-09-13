@@ -43,7 +43,8 @@ network MTreeBone_Homo_oneRouter_Network extends BasicNetwork
         }
         channel Channel_homo_up extends ned.DatarateChannel
         {
-            datarate = 500000kbps;
+            datarate = uniform(800kbps,1600kbps );//2-4
+            //datarate = uniform(1600kbps,4800kbps );//4-12
         }
         channel Channel_homo_down extends ned.DatarateChannel
         {
