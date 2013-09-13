@@ -31,9 +31,11 @@
 
 cplusplus {{
 #include <PeerStreamingPacket_m.h>
+#include "IPvXAddress.h"
 }}
 
 class PeerStreamingPacket;
+class noncobject IPvXAddress;
 
 // Messages for the MTreeBone-Protocol
 // @author Thorsten Jacobi
@@ -49,6 +51,10 @@ enum MTreeBonePacketType
 	MTREEBONE_PARENT_REQUEST_RESPONSE = 6;
 	MTREEBONE_CHUNK_REQUEST_LIST = 7;
 	MTREEBONE_PEER_INFORMATION = 8;
+	MTREEBONE_SWITCH_POSITION_REQUEST = 9;
+	MTREEBONE_SWITCH_POSITION_REQUEST_RESPONSE = 10;
+	MTREEBONE_REPLACE_CHILD = 11;
+	MTREEBONE_INFORM_NEW_PARENT = 12;
 }
 
 packet MTreeBonePacket extends PeerStreamingPacket
@@ -127,4 +133,37 @@ packet MTreeBonePeerInformationPacket extends MTreeBonePacket
 	packetType = MTREEBONE_PEER_INFORMATION;
 	
 	int distance[];
+	int numChildren[];
+}
+
+packet MTreeBonePeerSwitchPostionRequestPacket extends MTreeBonePacket
+{
+	packetType = MTREEBONE_SWITCH_POSITION_REQUEST;
+	
+	int stripe;
+	IPvXAddress suggestedNewParent;
+}
+
+packet MTreeBonePeerSwitchPostionRequestResponsePacket extends MTreeBonePacket
+{
+	packetType = MTREEBONE_SWITCH_POSITION_REQUEST_RESPONSE;
+	
+	int stripe;
+	IPvXAddress newParent;
+}
+
+packet MTreeBonePeerReplaceChildPacket extends MTreeBonePacket
+{
+	packetType = MTREEBONE_REPLACE_CHILD;
+	
+	int stripe;
+	IPvXAddress newChild;
+}
+
+packet MTreeBonePeerInformNewParentPacket extends MTreeBonePacket
+{
+	packetType = MTREEBONE_INFORM_NEW_PARENT;
+	
+	int stripe;
+	IPvXAddress newParent;
 }
