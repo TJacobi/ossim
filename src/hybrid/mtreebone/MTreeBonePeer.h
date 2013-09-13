@@ -17,25 +17,39 @@
 #define MTREEBONEPEER_H_
 
 #include "MTreeBoneBase.h"
+#include "PlayerStallSkip.h"
+#include "PlayerBufferSkip.h"
+#include "PlayerListener.h"
 
-class MTreeBonePeer: public MTreeBoneBase {
+class MTreeBonePeer: public MTreeBoneBase, public PlayerListener {
 public:
     MTreeBonePeer();
     virtual ~MTreeBonePeer();
 
     virtual void onNewChunk(IPvXAddress src, int sequenceNumber);
-protected:
+
+    // PlayerListener:
+    void onPlayerStarted();
+    virtual void onChunksSkipped(SEQUENCE_NUMBER_T oldposition, SEQUENCE_NUMBER_T newposition);
+
+    PlayerBufferSkip* getPlayer(){return mPlayer;}
+    //PlayerStallSkip* getPlayer(){return mPlayer;}
 protected:
     virtual int numInitStages() const { return 4; }
     virtual void initialize(int stage);
     virtual void handleTimerMessage(cMessage *msg);
     virtual void processPacket(cPacket *pkt);
+
+    void removeParent(int stripe);
 private:
     // timer
     cMessage* timer_joinNetwork;
+    cMessage* timer_leaveNetwork;
     cMessage* timer_checkNeighbors;
     cMessage* timer_chunkScheduler;
 
+    PlayerBufferSkip* mPlayer;
+    //PlayerStallSkip* mPlayer;
     // chunk request handling
     bool param_DisablePush;
     int param_ChunkScheduleInterval;
@@ -45,9 +59,12 @@ private:
     void checkNeighbors();
     void checkParents();
 
-    bool wantToBeBoneNode(int stripe){return !param_DisablePush;}; // simple method to disable the usage of push/parents};
+    bool wantToBeBoneNode(int stripe); // simple method to disable the usage of push/parents};
 
     void handleParentRequestResponse(IPvXAddress src, MTreeBoneParentRequestResponsePacket* resp);
+
+    void handleSwitchPositionRequest(IPvXAddress src, MTreeBonePeerSwitchPostionRequestPacket* resp);
+    void handleSwitchPositionResponse(IPvXAddress src, MTreeBonePeerSwitchPostionRequestResponsePacket* resp);
 
     virtual void doChunkSchedule();
     virtual void doChunkSchedule(unsigned int stripe);

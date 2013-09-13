@@ -24,7 +24,8 @@ MTreeBoneSource::MTreeBoneSource(){
 }
 
 MTreeBoneSource::~MTreeBoneSource() {
-
+    if (timer_joinNetwork)
+        cancelAndDelete(timer_joinNetwork); timer_joinNetwork = NULL;
 }
 
 void MTreeBoneSource::initialize(int stage){
@@ -33,6 +34,10 @@ void MTreeBoneSource::initialize(int stage){
     initBase();
 
     MTreeBoneStats::theStats->setSource(this);
+
+    timer_joinNetwork    = new cMessage("MTreeBoneSource_JOIN_NETWORK");
+    scheduleAt(SimTime(), timer_joinNetwork);
+
     // create messages
 
 
@@ -44,8 +49,10 @@ void MTreeBoneSource::initialize(int stage){
 
 void MTreeBoneSource::handleTimerMessage(cMessage *msg){
 
-    if (msg == NULL)
+    if (msg == timer_joinNetwork)
     {
+        m_Gossiper->joinNetwork();
+        cancelAndDelete(timer_joinNetwork); timer_joinNetwork = NULL;
     }
     else
     {
@@ -65,4 +72,9 @@ bool MTreeBoneSource::isBoneNodeForStripe(int stripe){
 
 int MTreeBoneSource::getMyDistance(int stripe){
     return 0;
+}
+
+void MTreeBoneSource::onNewChunk(IPvXAddress src, int sequenceNumber){
+    MTreeBoneStats::theStats->chunkGenerated(sequenceNumber);
+    MTreeBoneBase::onNewChunk(src, sequenceNumber);
 }

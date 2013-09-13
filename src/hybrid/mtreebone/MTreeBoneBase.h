@@ -105,6 +105,9 @@ protected:
     void checkFreeUploadListState();
 
     void handleParentRequest(IPvXAddress src, MTreeBoneParentRequestPacket* pkt);
+    void handleReplaceChild(IPvXAddress src, MTreeBonePeerReplaceChildPacket* pkt);
+
+    void removeChild(int stripe, IPvXAddress addr);
     // timers
     cMessage* timer_sendBufferMaps;
 

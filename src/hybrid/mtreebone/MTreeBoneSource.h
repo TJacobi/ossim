@@ -23,7 +23,9 @@ public:
     MTreeBoneSource();
     virtual ~MTreeBoneSource();
 
+    virtual void onNewChunk(IPvXAddress src, int sequenceNumber);
 protected:
+    cMessage* timer_joinNetwork;
 
     virtual int numInitStages() const { return 4; }
     virtual void initialize(int stage);
