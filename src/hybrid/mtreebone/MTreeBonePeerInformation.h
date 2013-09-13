@@ -46,6 +46,7 @@ public:
     }
 
     int getDistance(int stripe);
+    int getNumChildren(int stripe);
 
     void setGossipData(MTreeBoneGossipData* data){
 
@@ -59,6 +60,7 @@ public:
     }
 
     void setDistance(int stripe, int value){distance[stripe] = value;}
+    void setNumChildren(int stripe, int value){numChildren[stripe] = value;}
 private:
     unsigned int sequenceNumberStart;
     unsigned int sequenceNumberEnd;
@@ -71,6 +73,7 @@ private:
     SimTime desertedPeer;
     MTreeBoneGossipData* lastData;
     int* distance;
+    int* numChildren;
     int missingChunks;
 };
 

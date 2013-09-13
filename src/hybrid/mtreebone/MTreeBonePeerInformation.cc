@@ -27,12 +27,14 @@ MTreeBonePeerInformation::MTreeBonePeerInformation(int stripes, int buffersize) 
     isbonenode       = new bool[stripes];
 
     distance         = new int[stripes];
+    numChildren      = new int[stripes];
 
     for (int i = 0; i < buffersize; i++)
         buffermap[i] = false;
     for (int i = 0; i < stripes; i++){
         isbonenode[i] = false;
         distance[i]   = -1;
+        numChildren[i] = -1;
     }
 
     sequenceNumberStart = sequenceNumberEnd = 0;
@@ -49,6 +51,7 @@ MTreeBonePeerInformation::~MTreeBonePeerInformation() {
     delete []buffermap;
     delete []isbonenode;
     delete []distance;
+    delete []numChildren;
 }
 
 void MTreeBonePeerInformation::updateFromBufferMap(MTreeBoneBufferMapPacket* pkt){
@@ -85,4 +88,12 @@ int MTreeBonePeerInformation::getDistance(int stripe){
     if (lastData == NULL)
         return -1;
     return lastData->getDistance(stripe);
+}
+
+int MTreeBonePeerInformation::getNumChildren(int stripe){
+    if (numChildren[stripe] >= 0)
+        return numChildren[stripe];
+    if (lastData == NULL)
+        return -1;
+    return lastData->getNumChildren(stripe);
 }
