@@ -7,7 +7,8 @@ import so.hybrid.mtreebone.MTreeBonePeer;
 import so.mesh.PartnerList;
 import so.payload.Forwarder;
 import so.payload.VideoBuffer;
-import so.payload.PlayerSimpleSkip;
+import so.payload.PlayerStallSkip;
+import so.payload.PlayerBufferSkip;
 //import simpleoverlay.global.AppSettingDonet;
 
 import so.membership.newscast.NewscastPeer;
@@ -37,7 +38,7 @@ module MTreeBonePeerApp
         videoBuffer: VideoBuffer {
             @display("p=211,104;i=block/buffer2");
         }
-        player: PlayerSimpleSkip {
+        player: PlayerBufferSkip {//PlayerStallSkip {
             @display("p=211,44;i=device/terminal");
         }
         partnerList: PartnerList {
