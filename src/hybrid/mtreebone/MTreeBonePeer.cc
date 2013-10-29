@@ -44,6 +44,7 @@ void MTreeBonePeer::initialize(int stage){
 
     param_DisablePush = par("disablePush");
     param_ChunkScheduleInterval = par("ScheduleInterval");
+    param_ChunkRequestTimeout   = par("ChunkRequestTimeout");
 
     //MTreeBoneStats::theStats->addPeer(this);
 
@@ -391,6 +392,9 @@ void MTreeBonePeer::doChunkSchedule(){
         m_PlayerPosition = head - m_videoBuffer->getSize()/2;
     }
 
+    //if (m_PlayerPosition < mPlayer->getCurrentPlaybackPoint())
+    //    m_PlayerPosition = mPlayer->getCurrentPlaybackPoint();
+
     for (unsigned int i = 0; i < param_numStripes; i++)
         doChunkSchedule(i);
 
@@ -493,7 +497,7 @@ void MTreeBonePeer::doChunkSchedule(unsigned int stripe){
         MTreeBoneChunkRequestListPacket* pkt = new MTreeBoneChunkRequestListPacket();
         pkt->setSequenceNumbersArraySize(iter->second.size());
         for (unsigned int i = 0; i < iter->second.size(); i++){
-            m_PendingRequests.insert(std::pair<int, SimTime>(iter->second.at(i), simTime()+0.5));
+            m_PendingRequests.insert(std::pair<int, SimTime>(iter->second.at(i), simTime() + param_ChunkRequestTimeout));
             pkt->setSequenceNumbers(i, iter->second.at(i));
         }
 
@@ -634,6 +638,7 @@ void MTreeBonePeer::handleSwitchPositionResponse(IPvXAddress src, MTreeBonePeerS
 
 void MTreeBonePeer::onPlayerStarted(){
     MTreeBoneStats::theStats->peerStartedPlayer(this);
+    m_outFileDebug << simTime() << "[Player] started" << endl;
 }
 
 bool MTreeBonePeer::wantToBeBoneNode(int stripe){
@@ -652,4 +657,16 @@ bool MTreeBonePeer::wantToBeBoneNode(int stripe){
     return !param_DisablePush;
 }
 
-void MTreeBonePeer::onChunksSkipped(SEQUENCE_NUMBER_T oldposition, SEQUENCE_NUMBER_T newposition){MTreeBoneStats::theStats->debugChunksSkipped(m_localAddress, oldposition, newposition);};
+void MTreeBonePeer::onChunksSkipped(SEQUENCE_NUMBER_T oldposition, SEQUENCE_NUMBER_T newposition){
+    MTreeBoneStats::theStats->debugChunksSkipped(m_localAddress, oldposition, newposition);
+    m_outFileDebug << simTime() << "[Player] skipped chunks from " << oldposition << " to " << newposition << endl;
+    MTreeBoneStats::theStats->onPlayerSkipped(this, oldposition, newposition);
+};
+
+void MTreeBonePeer::onChunkHit(SEQUENCE_NUMBER_T hit){
+    m_outFileDebug << simTime() << "[Player] hit " << hit << endl;
+};
+
+void MTreeBonePeer::onChunkMiss(SEQUENCE_NUMBER_T miss){
+    m_outFileDebug << simTime() << "[Player] miss " << miss << endl;
+};

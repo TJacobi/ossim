@@ -31,6 +31,8 @@ public:
     // PlayerListener:
     void onPlayerStarted();
     virtual void onChunksSkipped(SEQUENCE_NUMBER_T oldposition, SEQUENCE_NUMBER_T newposition);
+    virtual void onChunkHit(SEQUENCE_NUMBER_T hit);
+    virtual void onChunkMiss(SEQUENCE_NUMBER_T miss);
 
     PlayerBufferSkip* getPlayer(){return mPlayer;}
     //PlayerStallSkip* getPlayer(){return mPlayer;}
@@ -53,6 +55,7 @@ private:
     // chunk request handling
     bool param_DisablePush;
     int param_ChunkScheduleInterval;
+    double param_ChunkRequestTimeout;
 
     std::map<int, SimTime> m_PendingRequests; // sequence number, timeout
 

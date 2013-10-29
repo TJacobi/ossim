@@ -11,6 +11,7 @@ simple MTreeBonePeer extends MTreeBoneBase
         int ScheduleInterval = default(15);
         double joinTime @unit("s") = default(uniform(0.5s,5.0s));
         double stayDuration @unit("s") = default(-1.0s);
+        double ChunkRequestTimeout @unit("s") = default(1.0s);
 }
 
 
