@@ -241,8 +241,36 @@ void PlayerBufferSkip::handleTimerMessage(cMessage *msg)
     {
         if (m_videoBuffer->inBuffer(m_id_nextChunk)){
             m_chunks_hit++;
+            // listening support ->
+                std::vector<PlayerListener*>::iterator it;
+                for(it = mListeners.begin(); it != mListeners.end(); it++){
+                    (*it)->onChunkHit(m_id_nextChunk);
+                }
+            // <- listening support
         }else{
             m_chunks_missed++;
+            // listening support ->
+                std::vector<PlayerListener*>::iterator it;
+                for(it = mListeners.begin(); it != mListeners.end(); it++){
+                    (*it)->onChunkMiss(m_id_nextChunk);
+                }
+            // <- listening support
+
+            if ((m_id_nextChunk < m_videoBuffer->getBufferStartSeqNum()) || (m_id_nextChunk >= m_videoBuffer->getBufferEndSeqNum())){ // maybe we are out of buffer range ...
+                SEQUENCE_NUMBER_T newposition = findNextPlayablePosition();
+                if (newposition >= 0){
+                    // listening support ->
+                        std::vector<PlayerListener*>::iterator it;
+                        for(it = mListeners.begin(); it != mListeners.end(); it++){
+                            (*it)->onChunksSkipped(m_id_nextChunk, newposition);
+                        }
+                    // <- listening support
+                    if (newposition > m_id_nextChunk)
+                        m_chunks_skipped += (newposition - m_id_nextChunk);
+                    m_id_nextChunk = newposition;
+                }
+            }
+
         }
 
         m_id_nextChunk++;

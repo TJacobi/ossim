@@ -40,7 +40,7 @@ simple PlayerBufferSkip like PlayerBase
       int max_stalled_chunks = default(10);
       double interval_probe_playerStart @unit(s) = default(1s);
       
-      double bufferSecondsBeforeStart = default(3.0);
+      double bufferSecondsBeforeStart = default(5.0);
       int minimumOfChunksReceivedBeforeStart = default(50);
         
 		// --- Possible signals to collect

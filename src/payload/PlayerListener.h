@@ -27,6 +27,10 @@ public:
     virtual void onPlayerStarted();
 
     virtual void onChunksSkipped(SEQUENCE_NUMBER_T oldposition, SEQUENCE_NUMBER_T newposition){};
+
+    virtual void onChunkHit(SEQUENCE_NUMBER_T hit){};
+
+    virtual void onChunkMiss(SEQUENCE_NUMBER_T miss){};
 };
 
 #endif /* PLAYERLISTENER_H_ */
