@@ -42,7 +42,7 @@ simple MTreeBoneBase extends CommBase
         double MaxUploadFactor  = default(2.0);
         int maxNOP     = default(2);
     	int desiredNOP = default(4);
-    	
+    	double BufferMapIntervall @unit(s) = default(1.0s);
     	
 		//int substreamCount = default(3); // Number of substreams 
        

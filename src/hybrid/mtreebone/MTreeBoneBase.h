@@ -54,6 +54,7 @@ protected:
     unsigned int param_desiredNOP;
     // @brief number of stripes to use
     unsigned int param_numStripes;
+    double param_BufferMapIntervall;
 
     // timer
     cMessage* timer_checkPartners;
@@ -69,6 +70,8 @@ protected:
     virtual bool isBoneNodeForStripe(int stripe);
 
     virtual int getMyDistance(int stripe);
+
+    virtual void sendToDispatcher(MTreeBonePacket *pkt, int srcPort, const IPvXAddress& destAddr, int destPort);
 protected:
     int m_localPort, m_destPort;
 

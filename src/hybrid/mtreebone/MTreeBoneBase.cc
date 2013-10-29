@@ -64,7 +64,8 @@ void MTreeBoneBase::initBase() {
     // read parameters
     // partnership
     param_maxNOP     = par("maxNOP");
-    param_desiredNOP = par("desiredNOP");;
+    param_desiredNOP = par("desiredNOP");
+    param_BufferMapIntervall = par("BufferMapIntervall");
     if (param_maxNOP < 1) param_maxNOP = 4;
     if (param_desiredNOP < 1) param_desiredNOP = (param_maxNOP / 2) < 1 ? 1 : param_maxNOP / 2;
 
@@ -113,7 +114,7 @@ void MTreeBoneBase::initBase() {
     timer_sendBufferMaps = new cMessage("MTreeBoneBase: TIMER_SEND_BUFFERMAPS");
 
     // schedule timers
-    scheduleAt(simTime() + 1, timer_sendBufferMaps);
+    scheduleAt(simTime() + param_BufferMapIntervall, timer_sendBufferMaps);
 }
 
 void MTreeBoneBase::handleMessage(cMessage *msg)
@@ -172,7 +173,7 @@ void MTreeBoneBase::handleTimerMessage(cMessage *msg){
 
         updateOwnGossipData(); // update gossip data
 
-        scheduleAt(simTime() + 1.0, timer_sendBufferMaps); // reschedule
+        scheduleAt(simTime() + param_BufferMapIntervall, timer_sendBufferMaps); // reschedule
     }
 }
 
@@ -504,7 +505,9 @@ void MTreeBoneBase::handleChunkRequestList(IPvXAddress src, MTreeBoneChunkReques
         if ( (m_ChunksLeftForWindow > 0) && (m_videoBuffer->isInBuffer(seqNumber)) ){
             //m_FreeChunksLeftForWindow
             if ( m_FreeUploadList.containsItem(seqNumber) ){
+                m_ChunksLeftForWindow--;
                 m_ChunksUploaded++;
+
                 m_FreeUploadList.removeItem(seqNumber);
                 m_FreeChunksLeftForWindow--;
 
@@ -643,4 +646,9 @@ void MTreeBoneBase::handleReplaceChild(IPvXAddress src, MTreeBonePeerReplaceChil
         peerInfo->setNumChildren(i, m_Stripes[i].Children.size());
     }
     sendToDispatcher(peerInfo, m_localPort, pkt->getNewChild(), m_destPort);
+}
+
+void MTreeBoneBase::sendToDispatcher(MTreeBonePacket *pkt, int srcPort, const IPvXAddress& destAddr, int destPort){
+    MTreeBoneStats::theStats->registerPacketSend((MTreeBonePacketType)pkt->getPacketType());
+    CommBase::sendToDispatcher(pkt, srcPort, destAddr, destPort);
 }
