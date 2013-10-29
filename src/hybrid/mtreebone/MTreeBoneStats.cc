@@ -1,4 +1,5 @@
 #include "MTreeBoneStats.h"
+#include "MTreeBonePacket_m.h"
 
 MTreeBoneStats* MTreeBoneStats::theStats = NULL;
 
@@ -12,12 +13,17 @@ MTreeBoneStats::MTreeBoneStats() {
     m_Timer_Report_Stats = NULL;
 
     m_PeerOutput.open("peeractivity.txt");
-}
+
+    mStats_Packets = new long[MTREEBONE_PACKETS_MAX+1];
+    for (int i = 0; i < MTREEBONE_PACKETS_MAX+1; i++)
+        mStats_Packets[i] = 0;
+    void registerPacketSend(MTreeBonePacketType type);}
 
 MTreeBoneStats::~MTreeBoneStats() {
     if (m_Timer_Report != NULL) cancelAndDelete(m_Timer_Report); m_Timer_Report = NULL;
     if (m_Timer_Report_Stats != NULL) cancelAndDelete(m_Timer_Report_Stats); m_Timer_Report_Stats = NULL;
 
+    delete[] mStats_Packets;
     //m_PeerOutput.close();
 }
 
@@ -46,6 +52,8 @@ void MTreeBoneStats::initialize(int stage){
     mStats_StartUpDelay_Min = mStats_StartUpDelay_Min_t = -1;
     mStats_StartUpDelay_Max = mStats_StartUpDelay_Max_t = -1;
     mStats_StartUpDelay_Total = mStats_StartUpDelay_Total_t = mStats_StartUpDelay_Count = mStats_StartUpDelay_Count_t = 0;
+
+    mStats_Player_Hits = mStats_Player_Miss = mStats_Player_Stall = mStats_Player_Skip = 0;
     //mStats_Chunks = new cChunkStats( 0, 0);
     mStats_Last   = new cChunkStats( 0, 0);
     mStats_Chunks_Pushed = mStats_Chunks_Pulled = 0;
@@ -120,6 +128,12 @@ void MTreeBoneStats::peerLeavedNetwork(MTreeBonePeer* peer){
     m_PeerOutput << simTime() << " [PEER] leaved Network: " << peer->getAddress() << endl;
     m_Peers.removeItem(peer);
 
+
+    mStats_Player_Hits  += peer->getPlayer()->getChunksHit();
+    mStats_Player_Miss  += peer->getPlayer()->getChunksMissed();
+    mStats_Player_Stall += peer->getPlayer()->getChunksStalled();
+    mStats_Player_Skip  += peer->getPlayer()->getChunksSkipped();
+
     mStats_Peers_Leaved++;
     mStats_Peers_Current--;
 }
@@ -166,6 +180,15 @@ void MTreeBoneStats::chunkReceived(MTreeBonePeer* peer, SEQUENCE_NUMBER_T chunkn
         stats->maxDelay = delay;
     stats->totalDelay += delay;
     stats->received++;
+
+    if ((mPeerjoinTime.find( peer ) != mPeerjoinTime.end()) && (mPeerjoinTime.find(peer)->second < stats->generated)){
+        if ( (delay < stats->minDelayB) || (stats->minDelayB < 0) )
+            stats->minDelayB = delay;
+        if ( (delay > stats->maxDelayB) || (stats->maxDelayB < 0) )
+            stats->maxDelayB = delay;
+        stats->totalDelayB += delay;
+        stats->receivedB++;
+    }
 }
 
 void MTreeBoneStats::printStats(){
@@ -224,6 +247,10 @@ void MTreeBoneStats::printStats(){
     m_PeerOutput << " Max: " << mStats_Last->maxDelay;
     m_PeerOutput << " Avg: " << (mStats_Last->totalDelay / mStats_Last->received);
     m_PeerOutput << " Received: " << mStats_Last->received;
+    m_PeerOutput << " MinB: " << mStats_Last->minDelayB;
+    m_PeerOutput << " MaxB: " << mStats_Last->maxDelayB;
+    m_PeerOutput << " AvgB: " << (mStats_Last->totalDelayB / mStats_Last->receivedB);
+    m_PeerOutput << " ReceivedB: " << mStats_Last->receivedB;
     m_PeerOutput << endl;
 
     // push/pull
@@ -269,7 +296,21 @@ void MTreeBoneStats::printStats(){
     m_PeerOutput << " Skipped: " << player_skipped;
     m_PeerOutput << " @ " << m_Peers.size() << " Peers";
     m_PeerOutput << endl;
+    m_PeerOutput << " [STATS][PLAYER][TOTAL]";
+    m_PeerOutput << " Hits: " << (mStats_Player_Hits+player_hits);
+    m_PeerOutput << " Misses: " << (mStats_Player_Miss+player_misses);
+    m_PeerOutput << " Stalled: " << (mStats_Player_Stall+player_stalls);
+    m_PeerOutput << " Skipped: " << (mStats_Player_Skip+player_skipped);
+    m_PeerOutput << endl;
 
+
+    m_PeerOutput << " [STATS][PACKETS][TOTAL]";
+    long temp = 0;
+    for (int i = 0; i < MTREEBONE_PACKETS_MAX+1; i++){
+        temp += mStats_Packets[i];
+        m_PeerOutput << " type " << i << ": " << mStats_Packets[i];
+    }
+    m_PeerOutput << " total: " << temp << endl;
 
 
 
@@ -287,6 +328,10 @@ void MTreeBoneStats::printChunkStats(SEQUENCE_NUMBER_T chunknumber){
     m_PeerOutput << " Max: " << stats->maxDelay;
     m_PeerOutput << " Avg: " << (stats->totalDelay / stats->received);
     m_PeerOutput << " Received: " << stats->received;
+    m_PeerOutput << " MinB: " << stats->minDelayB;
+    m_PeerOutput << " MaxB: " << stats->maxDelayB;
+    m_PeerOutput << " AvgB: " << (stats->totalDelayB / stats->receivedB);
+    m_PeerOutput << " ReceivedB: " << stats->receivedB;
     m_PeerOutput << " PeersAtGeneration: " << stats->peersAtGenerations;
     m_PeerOutput << endl;
 
@@ -328,6 +373,13 @@ void MTreeBoneStats::cleanOldData(simtime_t thresh){
             mStats_Last->received   += (*it).second->received;
             mStats_Last->peersAtGenerations++;
 
+            if ( ((*it).second->minDelayB < mStats_Last->minDelayB) || (mStats_Last->minDelayB < 0) )
+                mStats_Last->minDelayB = (*it).second->minDelayB;
+            if ( ((*it).second->maxDelayB > mStats_Last->maxDelayB) || (mStats_Last->maxDelayB < 0) )
+                mStats_Last->maxDelayB = (*it).second->maxDelayB;
+            mStats_Last->totalDelayB += (*it).second->totalDelayB;
+            mStats_Last->receivedB   += (*it).second->receivedB;
+
             delete (*it).second;
             mChunkStats.erase( it++ );
 
@@ -343,4 +395,12 @@ void MTreeBoneStats::chunkSendViaPush(IPvXAddress src, IPvXAddress dst, SEQUENCE
 }
 void MTreeBoneStats::chunkSendViaPull(IPvXAddress src, IPvXAddress dst, SEQUENCE_NUMBER_T chunknumber){
     mStats_Chunks_Pulled++;
+}
+
+void MTreeBoneStats::registerPacketSend(MTreeBonePacketType type){
+    mStats_Packets[type]++;
+}
+
+void MTreeBoneStats::onPlayerSkipped(MTreeBonePeer* peer, SEQUENCE_NUMBER_T oldposition, SEQUENCE_NUMBER_T newposition){
+    m_PeerOutput << simTime() << " [DEBUG][PLAYER] skipped from " << oldposition << " to " << newposition << " @ " << peer->getAddress().str() << " bonenode: " << !peer->getParent(0).isUnspecified() << endl;
 }

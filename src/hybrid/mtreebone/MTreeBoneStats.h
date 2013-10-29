@@ -29,6 +29,9 @@ public:
         m_PeerOutput << simTime() << " [PLAYER][SKIP] player " << addr.str() << " skipped from " << oldposition << " to " << newposition << " count: " << (newposition-oldposition) << endl;
     }
 
+    void registerPacketSend(MTreeBonePacketType type);
+
+    void onPlayerSkipped(MTreeBonePeer* peer, SEQUENCE_NUMBER_T oldposition, SEQUENCE_NUMBER_T newposition);
 
     static MTreeBoneStats* theStats; // global pointer for easier acces
 
@@ -42,14 +45,15 @@ protected:
     public:
         cChunkStats (simtime_t gen, int peers){
             generated = gen;
-            received = 0;
-            minDelay = maxDelay = -1;
-            totalDelay = 0;
+            received = receivedB = 0;
+            minDelay = maxDelay = minDelayB = maxDelayB -1;
+            totalDelay = totalDelayB = 0;
             peersAtGenerations = peers;
         }
         simtime_t generated;
-        int received, peersAtGenerations;
+        int received, peersAtGenerations, receivedB;
         simtime_t minDelay, maxDelay, totalDelay;
+        simtime_t minDelayB, maxDelayB, totalDelayB;
     };
 
     MTreeBoneSource* m_Src;
@@ -79,6 +83,10 @@ protected:
     cChunkStats* mStats_Last;
 
     long mStats_Chunks_Pushed, mStats_Chunks_Pulled, mStats_Chunks_Pushed_t, mStats_Chunks_Pulled_t;
+
+    long* mStats_Packets;
+
+    long mStats_Player_Hits, mStats_Player_Miss, mStats_Player_Stall, mStats_Player_Skip;
 
     void cleanOldData(simtime_t thresh = 60);
 
