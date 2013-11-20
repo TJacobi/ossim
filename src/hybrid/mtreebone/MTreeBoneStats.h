@@ -20,10 +20,13 @@ public:
     void peerStartedPlayer(MTreeBonePeer* peer);
 
     void chunkGenerated(SEQUENCE_NUMBER_T chunknumber);
-    void chunkReceived(MTreeBonePeer* peer, SEQUENCE_NUMBER_T chunknumber);
+    void chunkReceived(MTreeBonePeer* peer, SEQUENCE_NUMBER_T chunknumber, int hopcount, bool viaPush);
+    void chunkPlayed(MTreeBonePeer* peer, SEQUENCE_NUMBER_T chunknumber);
 
     void chunkSendViaPush(IPvXAddress src, IPvXAddress dst, SEQUENCE_NUMBER_T chunknumber);
     void chunkSendViaPull(IPvXAddress src, IPvXAddress dst, SEQUENCE_NUMBER_T chunknumber);
+
+    void chunkDuplicateReceived(MTreeBonePeer* peer, IPvXAddress sender, SEQUENCE_NUMBER_T chunknumber, bool viaPush);
 
     void debugChunksSkipped(IPvXAddress addr, SEQUENCE_NUMBER_T oldposition, SEQUENCE_NUMBER_T newposition){
         m_PeerOutput << simTime() << " [PLAYER][SKIP] player " << addr.str() << " skipped from " << oldposition << " to " << newposition << " count: " << (newposition-oldposition) << endl;
@@ -49,11 +52,28 @@ protected:
             minDelay = maxDelay = minDelayB = maxDelayB -1;
             totalDelay = totalDelayB = 0;
             peersAtGenerations = peers;
+
+            played = 0;
+            minPlayed = maxPlayed = -1;
+            totalPlayed = 0;
+            duplicatesPush = duplicatesPull = 0;
+
+            minHopsPush = maxHopsPush = minHopsPull = maxHopsPull = -1;
+            totalHopsPush = countHopsPush = totalHopsPull = countHopsPull = 0;
         }
         simtime_t generated;
         int received, peersAtGenerations, receivedB;
-        simtime_t minDelay, maxDelay, totalDelay;
-        simtime_t minDelayB, maxDelayB, totalDelayB;
+        double minDelay, maxDelay, totalDelay;
+        double minDelayB, maxDelayB, totalDelayB;
+
+        int played;
+        double minPlayed, maxPlayed, totalPlayed;
+
+        long duplicatesPush, duplicatesPull;
+
+        int minHopsPush, maxHopsPush, totalHopsPush, countHopsPush;
+        int minHopsPull, maxHopsPull, totalHopsPull, countHopsPull;
+
     };
 
     MTreeBoneSource* m_Src;
@@ -61,6 +81,15 @@ protected:
     int m_Stripes;
 
     std::ofstream m_PeerOutput;
+
+    std::ofstream m_StartUpDelay;
+    std::list<double> m_List_StartUpDelay;
+    std::ofstream m_PlayBackDelay;
+    std::list<double> m_List_PlayBackDelay;
+    std::ofstream m_ChunkMissHits;
+    std::list<double> m_List_MissRatio;
+
+    std::ofstream m_PeerReceiveRate;
 
     cMessage* m_Timer_Report;
     cMessage* m_Timer_Report_Stats;
@@ -70,17 +99,20 @@ protected:
 
     void doReportForStripe(int stripe);
 
-    simtime_t mStats_StartUpDelay_Min, mStats_StartUpDelay_Max, mStats_StartUpDelay_Total;
+    double mStats_StartUpDelay_Min, mStats_StartUpDelay_Max, mStats_StartUpDelay_Total;
     int mStats_StartUpDelay_Count;
 
-    simtime_t mStats_StartUpDelay_Min_t, mStats_StartUpDelay_Max_t, mStats_StartUpDelay_Total_t;
+    double mStats_StartUpDelay_Min_t, mStats_StartUpDelay_Max_t, mStats_StartUpDelay_Total_t;
     int mStats_StartUpDelay_Count_t;
 
     int mStats_Peers_Joined, mStats_Peers_Leaved, mStats_Peers_Current, mStats_Peers_MaxConcurrent;
     int mStats_Peers_Joined_t, mStats_Peers_Leaved_t, mStats_Peers_Current_t, mStats_Peers_MaxConcurrent_t;
 
-    cChunkStats* mStats_Chunks;
     cChunkStats* mStats_Last;
+
+    // Playback delay
+    int mStats_PlayDelay_Count;
+    double mStats_PlayDelay_SumAverage;
 
     long mStats_Chunks_Pushed, mStats_Chunks_Pulled, mStats_Chunks_Pushed_t, mStats_Chunks_Pulled_t;
 
@@ -88,10 +120,20 @@ protected:
 
     long mStats_Player_Hits, mStats_Player_Miss, mStats_Player_Stall, mStats_Player_Skip;
 
+    long mStats_Hops_Push_Count, mStats_Hops_Pull_Count;
+    double mStats_Hops_Push_Total, mStats_Hops_Pull_Total;
+
+    long mStats_Duplicate_Push,mStats_Duplicate_Pull;
+
     void cleanOldData(simtime_t thresh = 60);
 
     void printStats();
     void printChunkStats(SEQUENCE_NUMBER_T chunknumber);
+
+    bool param_PeriodOutput;
+    double param_PeriodOutputIntervall;
+private:
+    std::string mRootDirectory;
 };
 
 #endif /* MTREEBONESTATS_H_ */
