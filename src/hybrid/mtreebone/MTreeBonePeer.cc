@@ -43,8 +43,10 @@ void MTreeBonePeer::initialize(int stage){
     initBase();
 
     param_DisablePush = par("disablePush");
-    param_ChunkScheduleInterval = par("ScheduleInterval");
+    param_ChunkScheduleInterval = par("ChunkScheduleInterval");
     param_ChunkRequestTimeout   = par("ChunkRequestTimeout");
+
+    m_ChunksReceived = 0;
 
     //MTreeBoneStats::theStats->addPeer(this);
 
@@ -89,8 +91,10 @@ void MTreeBonePeer::handleTimerMessage(cMessage *msg){
         m_Gossiper->leaveNetwork();
         for (unsigned int stripe = 0; stripe < param_numStripes; stripe++){
             removeParent(stripe); // inform stripe parent that we are no longer a child
-            for (unsigned int child = 0; child < m_Stripes[stripe].Children.size(); child++)
-                removeChild(stripe, m_Stripes[stripe].Children.at(child));
+            while(m_Stripes[stripe].Children.size() > 0)
+                removeChild(stripe, m_Stripes[stripe].Children.at(0));
+            //for (unsigned int child = 0; child < m_Stripes[stripe].Children.size(); child++)
+                //removeChild(stripe, m_Stripes[stripe].Children.at(child));
             for (unsigned int neighbor = 0; neighbor < m_Stripes[stripe].Neighbors.size(); neighbor++){
                 MTreeBoneNeighborRequestResponsePacket* drop = new MTreeBoneNeighborRequestResponsePacket();
                 drop->setStripeNumber(stripe);
@@ -98,6 +102,9 @@ void MTreeBonePeer::handleTimerMessage(cMessage *msg){
                 sendToDispatcher(drop, m_localPort, m_Stripes[stripe].Neighbors.at(neighbor), m_destPort);
             }
         }
+
+        m_PendingRequests.clear();
+        mPlayer->stopPlayer();
     }
     else if (msg == timer_checkNeighbors){
         checkNeighbors();
@@ -108,9 +115,12 @@ void MTreeBonePeer::handleTimerMessage(cMessage *msg){
         doChunkSchedule();
         //if (mPlayer->getState() == 0)
             mPlayer->activate();
-        m_outFileDebug << simTime() << " video player state: " << mPlayer->getRealState() << " started: " << mPlayer->playerStarted() << " @ " << mPlayer->getCurrentPlaybackPoint() << " : " << mPlayer->getCountChunkHit() << " - " << mPlayer->getCountChunkMiss() << endl;
-        m_outFileDebug << simTime() << " video player state2: " << mPlayer->getChunksHit() << " , " << mPlayer->getChunksMissed() << " , " << mPlayer->getChunksStalled() << " , " << mPlayer->getChunksSkipped() << endl;
-        scheduleAt(simTime() + m_videoBuffer->getChunkInterval() * param_ChunkScheduleInterval, timer_chunkScheduler);
+
+        if (debugOutput){
+            m_outFileDebug << simTime() << " [PLAYER] state: " << mPlayer->getRealState() << " started: " << mPlayer->playerStarted() << " @ " << mPlayer->getCurrentPlaybackPoint() << " : " << mPlayer->getCountChunkHit() << " - " << mPlayer->getCountChunkMiss() << endl;
+            m_outFileDebug << simTime() << " [PLAYER] state2: " << mPlayer->getChunksHit() << " , " << mPlayer->getChunksMissed() << " , " << mPlayer->getChunksStalled() << " , " << mPlayer->getChunksSkipped() << endl;
+        }
+        scheduleAt(simTime() + param_ChunkScheduleInterval, timer_chunkScheduler);
     }
     else
     {
@@ -140,7 +150,8 @@ void MTreeBonePeer::processPacket(cPacket *pkt){
             stripe = (check_and_cast<MTreeBonePeerInformNewParentPacket*> (pkt))->getStripe();
             m_Stripes[stripe].Parent = (check_and_cast<MTreeBonePeerInformNewParentPacket*> (pkt))->getNewParent();
             addNeighbor(m_Stripes[stripe].Parent, stripe);
-            m_outFileDebug << simTime().str() << " [INFORM_PARENT] got new parent " << m_Stripes[stripe].Parent.str() << " for stripe " << stripe << endl;
+            if (debugOutput)
+                m_outFileDebug << simTime().str() << " [INFORM_PARENT] got new parent " << m_Stripes[stripe].Parent.str() << " for stripe " << stripe << endl;
             break;
         default:
         {
@@ -159,13 +170,17 @@ void MTreeBonePeer::processPacket(cPacket *pkt){
     }
 }
 
-void MTreeBonePeer::onNewChunk(IPvXAddress src, int sequenceNumber){
+void MTreeBonePeer::onNewChunk(IPvXAddress src, int sequenceNumber, int hopcount){
+
+    removePendingRequest(sequenceNumber);
+
     cComponent* origContext = simulation.getContext();
     simulation.setContext(this);
     MTreeBonePeerInformation* info = getPeerInformation(src);
     EV << endl << " MTreeBonePeer::onNewChunk @ " << m_localAddress.str() << " -> " << sequenceNumber << " , " << (info == NULL) << endl << endl;
 
-    m_outFileDebug << simTime().str() << " [DOWN] got new chunk " << sequenceNumber << " from " << src.str() << endl;
+    if (debugOutput)
+        m_outFileDebug << simTime().str() << " [DOWN] got new chunk " << sequenceNumber << " from " << src.str() << endl;
 
     if (info != NULL){
         info->chunksReceived++;
@@ -173,10 +188,22 @@ void MTreeBonePeer::onNewChunk(IPvXAddress src, int sequenceNumber){
     simulation.setContext(origContext);
 
     globalDown++;
+    m_ChunksReceived++;
 
-    MTreeBoneStats::theStats->chunkReceived(this, sequenceNumber);
+    int stripe = sequenceNumber % param_numStripes;
+    MTreeBoneStats::theStats->chunkReceived(this, sequenceNumber, hopcount, m_Stripes[stripe].Parent.equals(src));
 
-    MTreeBoneBase::onNewChunk(src, sequenceNumber);
+    MTreeBoneBase::onNewChunk(src, sequenceNumber, hopcount);
+}
+
+void MTreeBonePeer::onDuplicateChunk(IPvXAddress src, int sequenceNumber, int hopcount){
+    int stripe = sequenceNumber % param_numStripes;
+
+    EV << endl << " MTreeBonePeer::onDuplicateChunk @ " << m_localAddress.str() << " -> " << sequenceNumber << " from " << src.str() << endl;
+    if (debugOutput)
+        m_outFileDebug << simTime().str() << " [DOWN] got duplicate chunk " << sequenceNumber << " from " << src.str() << " prob. via push" << m_Stripes[stripe].Parent.equals(src) << endl;
+
+    MTreeBoneStats::theStats->chunkDuplicateReceived(this, src, sequenceNumber, m_Stripes[stripe].Parent.equals(src));
 }
 
 void MTreeBonePeer::checkNeighbors(){
@@ -190,13 +217,15 @@ void MTreeBonePeer::checkNeighbors(){
             for (it = m_Stripes[i].Neighbors.begin(); it != m_Stripes[i].Neighbors.end(); it++){
                 info = getPeerInformation( *it );
                 if ((info == NULL) || (info->isProbablyDesertedPeer())){
-                    m_outFileDebug << simTime().str() << " [NEIGHBOR] remove deserted peer(a): " << (*it).str() << " for stripe: " << i << endl;
+                    if (debugOutput)
+                        m_outFileDebug << simTime().str() << " [NEIGHBOR] remove deserted peer(a): " << (*it).str() << " for stripe: " << i << endl;
                     MTreeBoneNeighborRequestResponsePacket* resp = new MTreeBoneNeighborRequestResponsePacket();
                     resp->setStripeNumber(i);
                     resp->setIsAccepted(false);
                     sendToDispatcher(resp, m_localPort, *it, m_destPort);
 
-                    m_outFileDebug << simTime().str() << " [NEIGHBOR] remove deserted peer(b): " << (*it).str() << " for stripe: " << i << endl;
+                    if (debugOutput)
+                        m_outFileDebug << simTime().str() << " [NEIGHBOR] remove deserted peer(b): " << (*it).str() << " for stripe: " << i << endl;
 
                     removeNeighbor( *it, i);
                     break;
@@ -214,7 +243,8 @@ void MTreeBonePeer::checkNeighbors(){
                 }
             }
         }else if(m_Stripes[i].Neighbors.size() > param_maxNOP){ // too many neighbors? shouldnt be possible ..
-            m_outFileDebug << simTime().str() << " [NEIGHBOR] too many neighbors for stripe " << i << " : " << m_Stripes[i].Neighbors.size() << endl;
+            if (debugOutput)
+                m_outFileDebug << simTime().str() << " [NEIGHBOR] too many neighbors for stripe " << i << " : " << m_Stripes[i].Neighbors.size() << endl;
         }
     }
 }
@@ -237,10 +267,11 @@ void MTreeBonePeer::checkParents(){
 
             // check if we can switch with parent
             info = getPeerInformation(m_Stripes[stripe].Parent);
-            if ( m_Stripes[stripe].Children.size() > 1 )
+            if ((debugOutput) && ( m_Stripes[stripe].Children.size() > 1 ))
                 m_outFileDebug << simTime().str() << " [DEBUG] children=" << info->getNumChildren(stripe) << "," << m_Stripes[stripe].Children.size() << endl;
             if ( (info->getDistance(stripe) > 0) && (m_Stripes[stripe].Children.size() > info->getNumChildren(stripe)) && (info->getNumChildren(stripe) > 0) ){
-                m_outFileDebug << simTime().str() << " [SWITCH] switching position with: " << m_Stripes[stripe].Parent.str() << " for stripe: " << stripe << endl;
+                if (debugOutput)
+                    m_outFileDebug << simTime().str() << " [SWITCH] switching position with: " << m_Stripes[stripe].Parent.str() << " for stripe: " << stripe << endl;
 
                 MTreeBonePeerSwitchPostionRequestPacket* req = new MTreeBonePeerSwitchPostionRequestPacket();
                 req->setStripe(stripe);
@@ -249,7 +280,7 @@ void MTreeBonePeer::checkParents(){
                 continue;
             }
 
-            // atm only check neighbors
+            // check neighbors
             genericList<IPvXAddress> possible;
             std::vector<IPvXAddress>::iterator it;
             for (it = m_Stripes[stripe].Neighbors.begin(); it != m_Stripes[stripe].Neighbors.end(); it++){
@@ -257,8 +288,11 @@ void MTreeBonePeer::checkParents(){
                 if (info == NULL) continue;
 
                 if ( (info->getDistance(stripe) < currentDistance) &&
-                        (info->getDistance(stripe) >= 0) ){
-                    m_outFileDebug << simTime().str() << " [PARENTSELECTION]a adding possible " << (*it).str() << " distance " << info->getDistance(stripe) << endl;
+                        (info->getDistance(stripe) >= 0) &&
+                        (info->getSequenceNumberEnd() > mPlayer->getCurrentPlaybackPoint())
+                   ){
+                    if (debugOutput)
+                        m_outFileDebug << simTime().str() << " [PARENTSELECTION]a adding possible " << (*it).str() << " distance " << info->getDistance(stripe) << endl;
                     possible.addItem(*it);
                 }
             }
@@ -288,7 +322,8 @@ void MTreeBonePeer::checkParents(){
                     }
                 }*/
                 //m_outFileDebug << simTime().str() << " [DEBUG] new parent selection 3" << endl;
-                m_outFileDebug << simTime().str() << " [PARENTSELECTION]b adding possible " << (*it).str() << " distance " << data->getDistance(stripe) << endl;
+                if (debugOutput)
+                    m_outFileDebug << simTime().str() << " [PARENTSELECTION]b adding possible " << (*it).str() << " distance " << data->getDistance(stripe) << endl;
                 possible.addItem(*it);
                 delete userData;
                 //m_outFileDebug << simTime().str() << " [DEBUG] new parent selection 4" << endl;
@@ -297,7 +332,8 @@ void MTreeBonePeer::checkParents(){
             possible.removeItem(m_localAddress);
 
             if ((switchDistance > 0) && (uniform(0,1) < 0.25)){
-                m_outFileDebug << simTime().str() << " [SWITCH] switching position with: " << switchTo.str() << " for stripe: " << stripe << endl;
+                if (debugOutput)
+                    m_outFileDebug << simTime().str() << " [SWITCH] switching position with: " << switchTo.str() << " for stripe: " << stripe << endl;
 
                 MTreeBonePeerSwitchPostionRequestPacket* req = new MTreeBonePeerSwitchPostionRequestPacket();
                 req->setStripe(stripe);
@@ -314,41 +350,47 @@ void MTreeBonePeer::checkParents(){
                 sendToDispatcher(req, m_localPort, query, m_destPort);
                 m_Stripes[stripe].nextParentRequest = simTime() + 3;
 
-                m_outFileDebug << simTime().str() << " [PARENT] send request to " << query.str() << " for stripe: "<< req->getStripeNumber() << " _ isNeigbor? " << m_Stripes[stripe].Neighbors.containsItem(query) << endl;
+                if (debugOutput)
+                    m_outFileDebug << simTime().str() << " [PARENT] send request to " << query.str() << " for stripe: "<< req->getStripeNumber() << " _ isNeigbor? " << m_Stripes[stripe].Neighbors.containsItem(query) << endl;
             }
 
             continue;// Done with this stripe
+        }else{ // not a bone node for this stripe
+            /*if ((m_Stripes[stripe].Children.size() > 0) && (intrand(5) == 1)){ // but we have children
+                removeChild(stripe, m_Stripes[stripe].Children.at(0)); // randomly drop the first child -> Intention: maybe the child can find a better parent than we can and later we may adapt the child as a parent ...
+            }*/
+            while (m_Stripes[stripe].Children.size() > 0)
+                removeChild(stripe, m_Stripes[stripe].Children.at(0));
+
+            for (unsigned int i = 0; i < m_Stripes[stripe].Neighbors.size(); i++){
+                int rnd = (int)intrand(m_Stripes[stripe].Neighbors.size());
+                addr = m_Stripes[stripe].Neighbors.at(rnd);
+
+                info = getPeerInformation(addr);
+                if ( (info == NULL) || (!info->isBoneNode(stripe)) ) // no peer information or peer is not a bone node?
+                    continue;
+
+                m_Stripes[stripe].nextParentRequest = simTime() + 3;
+                MTreeBoneParentRequestPacket* req = new MTreeBoneParentRequestPacket();
+                req->setStripeNumber(stripe);
+                req->setAbort(false);
+
+                if (debugOutput)
+                    m_outFileDebug << simTime().str() << " [PARENT] send request to " << addr.str() << " for stripe: "<< req->getStripeNumber() << endl;
+
+                sendToDispatcher(req, m_localPort, addr, m_destPort);
+                break;
+            }
         }
 
-        // not a bone node for this stripe
-        if ((m_Stripes[stripe].Children.size() > 0) && (intrand(5) == 1)){ // but we have children
-            removeChild(stripe, m_Stripes[stripe].Children.at(0)); // randomly drop the first child -> Intention: maybe the child can find a better parent than we can and later we may adapt the child as a parent ...
-        }
 
-        for (unsigned int i = 0; i < m_Stripes[stripe].Neighbors.size(); i++){
-            int rnd = (int)intrand(m_Stripes[stripe].Neighbors.size());
-            addr = m_Stripes[stripe].Neighbors.at(rnd);
-
-            info = getPeerInformation(addr);
-            if ( (info == NULL) || (!info->isBoneNode(stripe)) ) // no peer information or peer is not a bone node?
-                continue;
-
-            m_Stripes[stripe].nextParentRequest = simTime() + 3;
-            MTreeBoneParentRequestPacket* req = new MTreeBoneParentRequestPacket();
-            req->setStripeNumber(stripe);
-            req->setAbort(false);
-
-            m_outFileDebug << simTime().str() << " [PARENT] send request to " << addr.str() << " for stripe: "<< req->getStripeNumber() << endl;
-
-            sendToDispatcher(req, m_localPort, addr, m_destPort);
-            break;
-        }
     }
 }
 
 void MTreeBonePeer::handleParentRequestResponse(IPvXAddress src, MTreeBoneParentRequestResponsePacket* resp){
 
-    m_outFileDebug << simTime().str() << " [PARENT] got response from " << src.str() << " for stripe: " << resp->getStripeNumber() << " status: "<< (resp->getIsAccepted() ? "accepted" : "denied") << endl;
+    if (debugOutput)
+        m_outFileDebug << simTime().str() << " [PARENT] got response from " << src.str() << " for stripe: " << resp->getStripeNumber() << " status: "<< (resp->getIsAccepted() ? "accepted" : "denied") << endl;
 
     int stripe = resp->getStripeNumber();
 
@@ -356,13 +398,6 @@ void MTreeBonePeer::handleParentRequestResponse(IPvXAddress src, MTreeBoneParent
         removeParent(stripe);
         m_Stripes[stripe].Parent = src;
         addNeighbor(src, stripe);
-
-        /*std::string filename = m_localAddress.str() + ".parent";
-        std::ofstream m_outWriter;
-        m_outWriter.open(filename.c_str(), std::fstream::out);
-        m_outWriter << m_localAddress.str() << " " << src.str() << " " << endl;
-        m_outWriter.flush();
-        m_outWriter.close();*/
     }else{
         if (m_Stripes[stripe].Parent.equals(src))
             m_Stripes[stripe].Parent = IPvXAddress("0.0.0.0");
@@ -388,18 +423,19 @@ void MTreeBonePeer::doChunkSchedule(){
             (m_PlayerPosition < head - m_videoBuffer->getSize()*0.75)||
             ((m_PlayerPosition > head - m_videoBuffer->getSize()*0.25) && (head > m_videoBuffer->getSize() * 0.5))
     ){
-        m_outFileDebug << simTime().str() << " [PLAYING] adjust player position from " << m_PlayerPosition << " to " << (head - m_videoBuffer->getSize()/2) << endl;
-        m_PlayerPosition = head - m_videoBuffer->getSize()/2;
+        //m_outFileDebug << simTime().str() << " [PLAYING] adjust player position from " << m_PlayerPosition << " to " << (head - m_videoBuffer->getSize()/2) << endl;
+        m_PlayerPosition = head - m_ChunksPerSecond * 2;// m_videoBuffer->getSize()/2;
     }
 
-    //if (m_PlayerPosition < mPlayer->getCurrentPlaybackPoint())
-    //    m_PlayerPosition = mPlayer->getCurrentPlaybackPoint();
+    m_PlayerPosition = head - m_ChunksPerSecond * 5;// m_videoBuffer->getSize()/2;
+    if (mPlayer->playerStarted())
+        m_PlayerPosition = mPlayer->getCurrentPlaybackPoint();
 
     for (unsigned int i = 0; i < param_numStripes; i++)
         doChunkSchedule(i);
 
     if (head > m_ChunksPerSecond * 2) // wait till head is atleast 2 seconds ahead
-        m_PlayerPosition += param_ChunkScheduleInterval;
+        m_PlayerPosition += param_ChunkScheduleInterval * m_ChunksPerSecond;
 }
 
 void inline addRequestToMap(std::map<IPvXAddress, genericList<int> >* list, IPvXAddress addr, unsigned int chunk){
@@ -430,9 +466,16 @@ void MTreeBonePeer::doChunkSchedule(unsigned int stripe){
     unsigned int oldestChunk = ((m_PlayerPosition % param_numStripes) == stripe)? m_PlayerPosition : m_PlayerPosition + (stripe - m_PlayerPosition % param_numStripes) + param_numStripes;
     unsigned int newestChunk = m_PlayerPosition + m_videoBuffer->getSize()/2;
 
-    if (m_Stripes[stripe].isBoneNode())
-        newestChunk = max(m_videoBuffer->getHeadReceivedSeqNum() - m_ChunksPerSecond, oldestChunk + m_ChunksPerSecond * 3);
-    m_outFileDebug << simTime().str() << " [doChunkSchedule] from " << oldestChunk << " to " << newestChunk << " for stripe: " << stripe << endl;
+    if (m_Stripes[stripe].isBoneNode()){
+        //newestChunk = max(m_videoBuffer->getHeadReceivedSeqNum() - m_ChunksPerSecond, oldestChunk + m_ChunksPerSecond * 3);
+        if (getPeerInformation(m_Stripes[stripe].Parent) != NULL){
+            newestChunk = max(m_videoBuffer->getHeadReceivedSeqNum(), getPeerInformation(m_Stripes[stripe].Parent)->getSequenceNumberEnd());
+            newestChunk = max(m_PlayerPosition + m_ChunksPerSecond, newestChunk - m_ChunksPerSecond);
+        }else
+            newestChunk = max(m_videoBuffer->getHeadReceivedSeqNum() - m_ChunksPerSecond, oldestChunk + m_ChunksPerSecond * 3);
+    }
+    if (debugOutput)
+        m_outFileDebug << simTime().str() << " [doChunkSchedule] from " << oldestChunk << " to " << newestChunk << " for stripe: " << stripe << endl;
 
     IPvXAddress addr;
     MTreeBonePeerInformation* info;
@@ -446,7 +489,8 @@ void MTreeBonePeer::doChunkSchedule(unsigned int stripe){
         if ( (!m_videoBuffer->inBuffer(chunk)) && (! requestIsPending(chunk) ) ) // we dont have that chunk + request is not pending
             if (getNumberOfPeersWithChunk(stripe, chunk) == 1){ // it only exists one peer who has that chunk
                 addr = getFirstPeerWithChunk(stripe, chunk); // get that peer
-                m_outFileDebug << simTime().str() << " [DOWN] request chunk from single source " << chunk << " , " << addr.str() << endl;
+                if (debugOutput)
+                    m_outFileDebug << simTime().str() << " [DOWN] request chunk from single source " << chunk << " , " << addr.str() << endl;
                 if (getRequestCountInMap(requests, addr) < 25){
                     addRequestToMap(requests, addr, chunk);       // add him to the request list
                     numberOfRequests++;
@@ -458,21 +502,17 @@ void MTreeBonePeer::doChunkSchedule(unsigned int stripe){
     for (unsigned int chunk = oldestChunk; chunk < newestChunk; chunk++){
         if ( (!m_videoBuffer->inBuffer(chunk)) && (! requestIsPending(chunk) ) ) // we dont have that chunk + request is not pending
             if (getNumberOfPeersWithChunk(stripe, chunk) > 1){ // only if multiply copies exist ...
-//                m_outFileDebug << simTime().str() << " [DOWNDEBUG] chunk " << chunk << " peers " <<  getNumberOfPeersWithChunk(stripe, chunk) << endl;
 
                 std::vector<IPvXAddress>::iterator it;
                 IPvXAddress best; double bestQuality = -1;
                 for (it = m_Stripes[stripe].Neighbors.begin(); it != m_Stripes[stripe].Neighbors.end(); it++){
                     info = getPeerInformation(*it);
-//                    m_outFileDebug << simTime().str() << " [DOWNDEBUG] address " << (*it).str() << " requests " << getRequestCountInMap(requests, *it) << endl;
+
                     if ( (info->inBuffer(chunk)) && (getRequestCountInMap(requests, *it) < 15)){
                         double quality = ((numberOfRequests+1) - getRequestCountInMap(requests, *it));
                                 quality *= info->getQuality();
                                 quality /= (double)numberOfRequests;
                         if ( (*it).equals(m_Stripes[stripe].Parent)) quality *= 0.25;
-
-//                        m_outFileDebug << simTime().str() << " [DOWNDEBUG] number req " << numberOfRequests << " peer quality: " << info->getQuality() << endl;
-//                        m_outFileDebug << simTime().str() << " [DOWNDEBUG] quality " << quality << endl;
 
                         if (quality > bestQuality){
                             bestQuality = quality;
@@ -482,7 +522,8 @@ void MTreeBonePeer::doChunkSchedule(unsigned int stripe){
                 }
 
                 if (bestQuality > 0){
-                    m_outFileDebug << simTime().str() << " [DOWN] picking " << best.str() << " for chunk " << chunk << " quality: " << bestQuality << endl;
+                    if (debugOutput)
+                        m_outFileDebug << simTime().str() << " [DOWN] picking " << best.str() << " for chunk " << chunk << " quality: " << bestQuality << endl;
                     addRequestToMap(requests, best, chunk);
                     numberOfRequests++;
                 }
@@ -504,7 +545,8 @@ void MTreeBonePeer::doChunkSchedule(unsigned int stripe){
         info = getPeerInformation(iter->first);
         info->requestsSend += iter->second.size();
 
-        m_outFileDebug << simTime().str() << " [DOWN] sending request list to " << iter->first.str() << " count: " << iter->second.size() << endl;
+        if (debugOutput)
+            m_outFileDebug << simTime().str() << " [DOWN] sending request list to " << iter->first.str() << " count: " << iter->second.size() << endl;
 
         sendToDispatcher(pkt, m_localPort, iter->first, m_destPort);
     }
@@ -551,7 +593,8 @@ bool MTreeBonePeer::requestIsPending(unsigned int sequenceNumber){
     //m_outFileDebug << simTime().str() << " [requestIsPending] b " << sequenceNumber << " timeout: " << it->second << endl;
 
     if (it->second < simTime() ){ // timed out
-        m_outFileDebug << simTime().str() << " [DOWN] timed out: " << sequenceNumber << endl;
+        if (debugOutput)
+            m_outFileDebug << simTime().str() << " [DOWN] timed out: " << sequenceNumber << endl;
         m_PendingRequests.erase(it);
         return false;
     }
@@ -561,13 +604,24 @@ bool MTreeBonePeer::requestIsPending(unsigned int sequenceNumber){
     return true;
 }
 
+void MTreeBonePeer::removePendingRequest(unsigned int sequenceNumber){
+
+    std::map<int, SimTime>::iterator it = m_PendingRequests.find(sequenceNumber);
+    if (it == m_PendingRequests.end())
+        return;
+
+    m_PendingRequests.erase(it);
+}
+
 void MTreeBonePeer::handleSwitchPositionRequest(IPvXAddress src, MTreeBonePeerSwitchPostionRequestPacket* req){
     int stripe = req->getStripe();
 
-    m_outFileDebug << simTime().str() << " [SWITCH] got request from" << src.str() << " with suggested new parent " << req->getSuggestedNewParent().str() << " for stripe " << stripe << endl;
+    if (debugOutput)
+        m_outFileDebug << simTime().str() << " [SWITCH] got request from" << src.str() << " with suggested new parent " << req->getSuggestedNewParent().str() << " for stripe " << stripe << endl;
 
     if (m_Stripes[stripe].Parent.isUnspecified()){
-        m_outFileDebug << simTime().str() << " [SWITCH] DECLINED: NO PARENT" << endl;
+        if (debugOutput)
+            m_outFileDebug << simTime().str() << " [SWITCH] DECLINED: NO PARENT" << endl;
         return;
     }
 
@@ -588,6 +642,9 @@ void MTreeBonePeer::handleSwitchPositionRequest(IPvXAddress src, MTreeBonePeerSw
     //m_Stripes[stripe].Parent = req->getNewParent();
     //addNeighbor(req->getNewParent(), stripe);
 
+    // remove sender as a child ...
+    removeChild(stripe, src);
+
     sendToDispatcher(resp, m_localPort, src, m_destPort);
 
     // send a parent request to the suggested parent
@@ -605,40 +662,13 @@ void MTreeBonePeer::handleSwitchPositionRequest(IPvXAddress src, MTreeBonePeerSw
 void MTreeBonePeer::handleSwitchPositionResponse(IPvXAddress src, MTreeBonePeerSwitchPostionRequestResponsePacket* resp){
     int stripe = resp->getStripe();
 
-    m_outFileDebug << simTime().str() << " [SWITCH] got response from " << src.str() << " with new parent " << resp->getNewParent().str() << " for stripe " << stripe << endl;
+    if (debugOutput)
+        m_outFileDebug << simTime().str() << " [SWITCH] got response from " << src.str() << " with new parent " << resp->getNewParent().str() << " for stripe " << stripe << endl;
 
-    // send switch *only if we have a child, of course we should have children or else we shouldnt switch ... but just to be sure
-    /*if (m_Stripes[stripe].Children.size() > 0){
-        MTreeBonePeerInformNewParentPacket* inform = new MTreeBonePeerInformNewParentPacket();
-        inform->setStripe(stripe);
-        inform->setNewParent(IPAddress("0.0.0.0"));
-        sendToDispatcher(inform, m_localPort, m_Stripes[stripe].Children.at(0), m_destPort);
-
-        MTreeBonePeerReplaceChildPacket* repChild = new MTreeBonePeerReplaceChildPacket();
-        repChild->setNewChild(m_Stripes[stripe].Children.at(0)); // send current parent a child of us as a new child
-        repChild->setStripe(stripe);
-        sendToDispatcher(repChild, m_localPort, m_Stripes[stripe].Parent, m_destPort);
-
-        m_Stripes[stripe].Children.removeItem(m_Stripes[stripe].Children.at(0));
-    }*/
-
-    if (!m_Stripes[stripe].Parent.isUnspecified()){
-        MTreeBoneParentRequestPacket* abort = new MTreeBoneParentRequestPacket();
-        abort->setAbort(true);
-        abort->setStripeNumber(stripe);
-        sendToDispatcher(abort, m_localPort, m_Stripes[stripe].Parent, m_destPort);
-    }
+    removeParent(stripe);
 
     addNeighbor(resp->getNewParent(), stripe);
     m_Stripes[stripe].Parent = resp->getNewParent();
-
-    //addNeighbor(src, stripe);
-    //m_Stripes[stripe].Children.addItem(src);
-}
-
-void MTreeBonePeer::onPlayerStarted(){
-    MTreeBoneStats::theStats->peerStartedPlayer(this);
-    m_outFileDebug << simTime() << "[Player] started" << endl;
 }
 
 bool MTreeBonePeer::wantToBeBoneNode(int stripe){
@@ -649,24 +679,63 @@ bool MTreeBonePeer::wantToBeBoneNode(int stripe){
     simtime_t remaining = remaining.parse(ev.getConfig()->getConfigValue("sim-time-limit")) - simTime();
 
     // test for early promotion -> this test can lead to a node wanting to be a bonenode->connecting->failed or disconnected-> not want to be a bonenode anymore ...
-    double test = (remaining-stayedfor).dbl();
-    test = 1 / test;
-    if (dblrand() < test) return true;
+    //double test = (remaining-stayedfor).dbl();
+    //test = 1 / test;
 
-    return ( stayedfor > remaining * 0.3);
+    /*
+     *  k       x
+        0.5     0.25
+        0.6     0.264457737322019...
+        0.8     0.291466380311610...
+        1       0.3
+        1.2     0.338932
+        1.5     0.36981
+        1.8     0.397388
+        2       0.41421
+     */
+
+    double kResult = 0.3;
+    if (MTreeBoneSettings::theSettings != NULL)
+        kResult = MTreeBoneSettings::theSettings->getKResult();
+
+    if ((remaining * kResult - stayedfor.dbl() + 1) > 0){
+        double test;
+        test = 1 / (remaining * kResult - stayedfor.dbl() + 1);
+        if (dblrand() < test) return true;
+    }
+
+    return ( stayedfor > remaining * kResult);
     return !param_DisablePush;
+}
+
+
+void MTreeBonePeer::onPlayerStarted(){
+    MTreeBoneStats::theStats->peerStartedPlayer(this);
+    if (debugOutput){
+        m_outFileDebug << simTime() << "[Player] started @ " << mPlayer->getCurrentPlaybackPoint() <<  endl;
+        m_outFileDebug << m_videoBuffer->getBufferStartSeqNum() << "\t";
+
+        for (SEQUENCE_NUMBER_T offset = 0; offset < 10; offset++)
+            m_outFileDebug << " " << m_videoBuffer->inBuffer(mPlayer->getCurrentPlaybackPoint() + offset);
+
+        m_outFileDebug << endl;
+    }
 }
 
 void MTreeBonePeer::onChunksSkipped(SEQUENCE_NUMBER_T oldposition, SEQUENCE_NUMBER_T newposition){
     MTreeBoneStats::theStats->debugChunksSkipped(m_localAddress, oldposition, newposition);
-    m_outFileDebug << simTime() << "[Player] skipped chunks from " << oldposition << " to " << newposition << endl;
+    if (debugOutput)
+        m_outFileDebug << simTime() << "[Player] skipped chunks from " << oldposition << " to " << newposition << endl;
     MTreeBoneStats::theStats->onPlayerSkipped(this, oldposition, newposition);
 };
 
-void MTreeBonePeer::onChunkHit(SEQUENCE_NUMBER_T hit){
-    m_outFileDebug << simTime() << "[Player] hit " << hit << endl;
+void MTreeBonePeer::onChunkHit(SEQUENCE_NUMBER_T hit){ // hit equals played
+    if (debugOutput)
+        m_outFileDebug << simTime() << "[Player] hit " << hit << endl;
+    MTreeBoneStats::theStats->chunkPlayed(this, hit);
 };
 
 void MTreeBonePeer::onChunkMiss(SEQUENCE_NUMBER_T miss){
-    m_outFileDebug << simTime() << "[Player] miss " << miss << endl;
+    if (debugOutput)
+        m_outFileDebug << simTime() << "[Player] miss " << miss << endl;
 };

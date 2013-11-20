@@ -26,7 +26,9 @@ public:
     MTreeBonePeer();
     virtual ~MTreeBonePeer();
 
-    virtual void onNewChunk(IPvXAddress src, int sequenceNumber);
+    // VideoBufferListener
+    virtual void onNewChunk(IPvXAddress src, int sequenceNumber, int hopcount);
+    virtual void onDuplicateChunk(IPvXAddress src, int sequenceNumber, int hopcount);
 
     // PlayerListener:
     void onPlayerStarted();
@@ -54,7 +56,7 @@ private:
     //PlayerStallSkip* mPlayer;
     // chunk request handling
     bool param_DisablePush;
-    int param_ChunkScheduleInterval;
+    double param_ChunkScheduleInterval;
     double param_ChunkRequestTimeout;
 
     std::map<int, SimTime> m_PendingRequests; // sequence number, timeout
@@ -76,6 +78,11 @@ private:
     IPvXAddress getFirstPeerWithChunk(int stripe, int chunk);
 
     bool requestIsPending(unsigned int sequenceNumber);
+    void removePendingRequest(unsigned int sequenceNumber);
+
+    long m_ChunksReceived;
+public:
+    long getChunksReceived(){return m_ChunksReceived;}
 };
 
 #endif /* MTREEBONEPEER_H_ */
