@@ -74,7 +74,7 @@ int MTreeBoneSource::getMyDistance(int stripe){
     return 0;
 }
 
-void MTreeBoneSource::onNewChunk(IPvXAddress src, int sequenceNumber){
+void MTreeBoneSource::onNewChunk(IPvXAddress src, int sequenceNumber, int hopcount){
     MTreeBoneStats::theStats->chunkGenerated(sequenceNumber);
-    MTreeBoneBase::onNewChunk(src, sequenceNumber);
+    MTreeBoneBase::onNewChunk(src, sequenceNumber, hopcount);
 }
