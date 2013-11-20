@@ -148,8 +148,14 @@ void MTreeBonePeer::processPacket(cPacket *pkt){
             break;
         case MTREEBONE_INFORM_NEW_PARENT:
             stripe = (check_and_cast<MTreeBonePeerInformNewParentPacket*> (pkt))->getStripe();
-            m_Stripes[stripe].Parent = (check_and_cast<MTreeBonePeerInformNewParentPacket*> (pkt))->getNewParent();
+
+            IPvXAddress newParent = (check_and_cast<MTreeBonePeerInformNewParentPacket*> (pkt))->getNewParent();
+            if (!newParent.equals(m_Stripes[stripe].Parent))
+                removeParent(stripe);
+
+            m_Stripes[stripe].Parent = newParent;
             addNeighbor(m_Stripes[stripe].Parent, stripe);
+
             if (debugOutput)
                 m_outFileDebug << simTime().str() << " [INFORM_PARENT] got new parent " << m_Stripes[stripe].Parent.str() << " for stripe " << stripe << endl;
             break;
@@ -665,10 +671,12 @@ void MTreeBonePeer::handleSwitchPositionResponse(IPvXAddress src, MTreeBonePeerS
     if (debugOutput)
         m_outFileDebug << simTime().str() << " [SWITCH] got response from " << src.str() << " with new parent " << resp->getNewParent().str() << " for stripe " << stripe << endl;
 
-    removeParent(stripe);
+    IPvXAddress newParent = resp->getNewParent();
+    if (!m_Stripes[stripe].Parent.equals(newParent))
+        removeParent(stripe);
 
-    addNeighbor(resp->getNewParent(), stripe);
-    m_Stripes[stripe].Parent = resp->getNewParent();
+    addNeighbor(newParent, stripe);
+    m_Stripes[stripe].Parent = newParent;
 }
 
 bool MTreeBonePeer::wantToBeBoneNode(int stripe){
