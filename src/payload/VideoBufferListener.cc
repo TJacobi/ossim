@@ -57,7 +57,3 @@ VideoBufferListener::VideoBufferListener() {
 VideoBufferListener::~VideoBufferListener() {
     // TODO Auto-generated destructor stub
 }
-
-void VideoBufferListener::onNewChunk(IPvXAddress src, int sequenceNumber){
-
-}

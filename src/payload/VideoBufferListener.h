@@ -58,7 +58,9 @@ public:
     virtual ~VideoBufferListener();
 
 	// @brief gets called whenever the video Buffer receives a new chunk
-    virtual void onNewChunk(IPvXAddress src, int sequenceNumber);
+    virtual void onNewChunk(IPvXAddress src, int sequenceNumber, int hopcount){};
+
+    virtual void onDuplicateChunk(IPvXAddress src, int sequenceNumber, int hopcount){};
 };
 
 #endif /* VIDEOBUFFERLISTENER_H_ */

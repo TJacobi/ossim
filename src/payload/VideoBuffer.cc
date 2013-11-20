@@ -148,6 +148,16 @@ void VideoBuffer::insertPacket(VideoChunkPacket *packet)
         EV << "The chunk already existed in the buffer, should be discarded." << endl;
         emit(signal_duplicatedChunk, seq_num);
 //        m_gstat->reportDuplicatedChunk(seq_num);
+
+
+        // listening support ->
+            std::vector<VideoBufferListener*>::iterator it;
+            IPvXAddress src = check_and_cast<DpControlInfo *>(packet->getControlInfo())->getSrcAddr();
+            for(it = mListeners.begin(); it != mListeners.end(); it++){
+                (*it)->onDuplicateChunk(src, seq_num, packet->getHopCount());
+            }
+        // <- listening support
+
         delete packet; packet = NULL;
         return;
     }
@@ -235,7 +245,7 @@ void VideoBuffer::insertPacket(VideoChunkPacket *packet)
     std::vector<VideoBufferListener*>::iterator it;
     IPvXAddress src = check_and_cast<DpControlInfo *>(packet->getControlInfo())->getSrcAddr();
     for(it = mListeners.begin(); it != mListeners.end(); it++){
-        (*it)->onNewChunk(src, seq_num);
+        (*it)->onNewChunk(src, seq_num, packet->getHopCount());
     }
 // <- listening support
 
@@ -305,7 +315,7 @@ void VideoBuffer::insertPacketDirect(VideoChunkPacket *packet)
         ASSERT(false);
     }
     for(it = mListeners.begin(); it != mListeners.end(); it++){
-        (*it)->onNewChunk(src, seq_num);
+        (*it)->onNewChunk(src, seq_num, packet->getHopCount());
     }
 // <- listening support
 

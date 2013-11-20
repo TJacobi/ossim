@@ -105,6 +105,7 @@ void Forwarder::sendChunk(SEQUENCE_NUMBER_T seq, IPvXAddress destAddress, int de
     Enter_Method("sendChunk");
 
     VideoChunkPacket *chunkPkt = m_videoBuffer->getChunk(seq)->dup();
+    chunkPkt->setHopCount(chunkPkt->getHopCount() + 1);
 
     sendToDispatcher(chunkPkt, getLocalPort(), destAddress, destPort);
 
