@@ -74,6 +74,7 @@ packet MTreeBoneBufferMapPacket extends MTreeBonePacket
 	unsigned int  missingChunks;
 	bool boneNodeForStripe[];
 	bool bufferMap[];
+	bool tempYouAreMyParent;
 }
 
 //packet MTreeBoneChunkRequestPacket extends MTreeBonePacket
