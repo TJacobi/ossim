@@ -62,7 +62,7 @@ protected:
     void handleTimerMessage(cMessage *msg);
 
 public:
-    void stopPlayer(void) {} // TODO
+    void stopPlayer(void); // TODO
     void scheduleStopPlayer(void) {} // TODO
     void startPlayer(void);
 
@@ -81,46 +81,29 @@ public:
     double getContinuityIndex(void) { return 0.0; } // TODO
 
     int getRealState(){return m_state;}
-    SEQUENCE_NUMBER_T getPrefferedNextChunk();
-private:
-    bool shouldResumePlaying(SEQUENCE_NUMBER_T seq_num);
 
 protected:
-    // Pointer to other modules
-    //DonetPeer *m_
-
     // -- State variable
     bool m_playerStarted;
     cMessage *timer_nextChunk;
     cMessage *timer_playerStart;
     SEQUENCE_NUMBER_T m_id_nextChunk;
 
-    // -- Module (secondary) parameters
-    double m_interval_newChunk;
-    double param_interval_recheckVideoBuffer;
-    int m_chunkSize; // Bytes
 
     // -- Some new parameters for the Finite State Machine
     int m_state;
-    int param_max_skipped_chunk;
     double param_interval_probe_playerStart;
 
     // -- Statistics locally
     long m_chunks_hit, m_chunks_stalled, m_chunks_skipped, m_chunks_missed;
 
-    int m_skip;
-
-    int m_CurrentlyStalledChunks;
-
-    int param_MinimumChunks;
-    int param_MaxStalledChunks;
+    // player start
     double param_BufferSeconds;
     SEQUENCE_NUMBER_T findNextPlayablePosition();
+    bool   param_SeekReverse;
 
     // -- Pointers to external modules
     VideoBuffer *m_videoBuffer;
-    AppSettingDonet *m_appSetting;
-    StreamingStatistic *m_stat;
 
     // -- Signal for data collection
     simsignal_t sig_timePlayerStart;

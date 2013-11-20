@@ -36,12 +36,10 @@ simple PlayerBufferSkip like PlayerBase
    parameters:
       @class(PlayerBufferSkip);
       double interval_recheckVideoBuffer @unit(s) = default(0.1s);
-      int max_skipped_chunk = default(5);
-      int max_stalled_chunks = default(10);
-      double interval_probe_playerStart @unit(s) = default(1s);
+      double interval_probe_playerStart @unit(s) = default(0.1s);
       
-      double bufferSecondsBeforeStart = default(5.0);
-      int minimumOfChunksReceivedBeforeStart = default(50);
+      double bufferSecondsBeforeStart @unit(s) = default(5.0s);
+      bool   bufferSeekEarliestFirst           = default(false);
         
 		// --- Possible signals to collect
 		@signal[rebuffering_Local](type=long);

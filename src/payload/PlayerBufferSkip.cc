@@ -59,45 +59,22 @@ void PlayerBufferSkip::initialize(int stage)
     if (stage != 3)
         return;
 
-    m_CurrentlyStalledChunks = 0;
-
     // -- pointing to the Video Buffer
     cModule *temp = getParentModule()->getModuleByRelativePath("videoBuffer");
     m_videoBuffer = check_and_cast<VideoBuffer *>(temp);
     //    m_videoBuffer = dynamic_cast<VideoBuffer *>(temp);
 //    if (!m_videoBuffer) throw cException("Null pointer for the VideoBuffer module");
 
-    temp = simulation.getModuleByPath("appSetting");
-    m_appSetting = check_and_cast<AppSettingDonet *>(temp);
-    //    m_appSetting = dynamic_cast<AppSettingDonet *>(temp);
-//    if (!m_videoBuffer) throw cException("Null pointer for the AppSetting module");
-
-    temp = simulation.getModuleByPath("globalStatistic");
-    m_stat = check_and_cast<StreamingStatistic *>(temp);
-    //    m_stat = dynamic_cast<GlobalStatistic *>(temp);
-//    if (!m_stat) throw cException("Null pointer for the GlobalStatistic module");
-
     timer_nextChunk     = new cMessage("PLAYER_TIMER_NEXT_CHUNK");
     timer_playerStart   = new cMessage("PLAYER_TIMER_START");
 
-    // -- Reading parameters from module itself
-    param_interval_recheckVideoBuffer = par("interval_recheckVideoBuffer");
-
     // parameters
     param_BufferSeconds = par("bufferSecondsBeforeStart").doubleValue();
-    param_MinimumChunks = par("minimumOfChunksReceivedBeforeStart");
-    if (param_MinimumChunks < param_BufferSeconds / m_videoBuffer->getChunkInterval())
-        param_MinimumChunks = param_BufferSeconds / m_videoBuffer->getChunkInterval();
-    param_MaxStalledChunks = par("max_stalled_chunks");
+    param_SeekReverse   = !par("bufferSeekEarliestFirst").boolValue();
 
     // -- for the FSM
-    param_max_skipped_chunk = (int) par("max_skipped_chunk").doubleValue();
     param_interval_probe_playerStart = par("interval_probe_playerStart").doubleValue();
     m_state = PLAYER_STATE_IDLE;
-    m_skip = 0;
-
-    m_interval_newChunk = m_appSetting->getIntervalNewChunk();
-    m_chunkSize  = m_appSetting->getChunkSize();
 
     // -- State variables
     m_playerStarted = false;
@@ -119,20 +96,18 @@ void PlayerBufferSkip::initialize(int stage)
 //    scheduleAt(simTime() + par("videoStartTime").doubleValue(), timer_newChunk);
 
     WATCH(m_videoBuffer);
-    WATCH(m_appSetting);
-    WATCH(m_chunkSize);
-    WATCH(m_interval_newChunk);
 }
 
 void PlayerBufferSkip::activate(void)
 {
+
+    if (m_state != PLAYER_STATE_IDLE)
+        return;
+        //throw cException("Wrong Player state %d while expecting %d", m_state, PLAYER_STATE_IDLE);
+
     Enter_Method("activate()");
 
     EV << "Player activated" << endl;
-    if (m_state != PLAYER_STATE_IDLE)
-        return;
-
-        //throw cException("Wrong Player state %d while expecting %d", m_state, PLAYER_STATE_IDLE);
 
     m_state = PLAYER_STATE_BUFFERING;
     scheduleAt(simTime() + param_interval_probe_playerStart, timer_playerStart);
@@ -159,21 +134,36 @@ void PlayerBufferSkip::handleMessage(cMessage *msg)
 SEQUENCE_NUMBER_T PlayerBufferSkip::findNextPlayablePosition(){
     double requiredChunks  = param_BufferSeconds / m_videoBuffer->getChunkInterval();
 
-    for (SEQUENCE_NUMBER_T start = max(m_videoBuffer->getBufferStartSeqNum(), m_id_nextChunk); start < m_videoBuffer->getBufferEndSeqNum(); start++){
-        bool validposition = true;
-        for (SEQUENCE_NUMBER_T offset = start; offset < start + requiredChunks; offset++){
-            if (!m_videoBuffer->inBuffer(offset)){
-                validposition = false;
-                break;
+    if (!param_SeekReverse)
+        for (SEQUENCE_NUMBER_T start = max(m_videoBuffer->getBufferStartSeqNum(), m_id_nextChunk); start < m_videoBuffer->getBufferEndSeqNum(); start++){
+            bool validposition = true;
+            for (SEQUENCE_NUMBER_T offset = start; offset < start + requiredChunks; offset++){
+                if (!m_videoBuffer->inBuffer(offset)){
+                    validposition = false;
+                    break;
+                }
+            }
+
+            if (validposition){
+                return start;
+            }
+        }
+    else // seek for earliest position
+        for (SEQUENCE_NUMBER_T start = m_videoBuffer->getBufferEndSeqNum(); start >= max(m_videoBuffer->getBufferStartSeqNum(), m_id_nextChunk); start--){
+            bool validposition = true;
+            for (SEQUENCE_NUMBER_T offset = start; offset < start + requiredChunks; offset++){
+                if (!m_videoBuffer->inBuffer(offset)){
+                    validposition = false;
+                    break;
+                }
+            }
+
+            if (validposition){
+                return start;
             }
         }
 
-        if (validposition){
-            return start;
-        }
-    }
-
-    return -1;
+    return -1; // no valid position found
 }
 
 void PlayerBufferSkip::handleTimerMessage(cMessage *msg)
@@ -186,48 +176,37 @@ void PlayerBufferSkip::handleTimerMessage(cMessage *msg)
         {
         case PLAYER_STATE_BUFFERING:
         {
-            if (m_videoBuffer->getNumberOfChunkFill() < param_MinimumChunks)
-            {
-               EV << "*********************************************************" << endl;
-               EV << "Buffer filled not enough! Should not start the player now!" << endl;
+            int nextPosition = findNextPlayablePosition();
 
-                // Probe the status of the buffer again
+            if (nextPosition >= 0){
+                EV << "*********************************************************" << endl;
+                EV << "Player starts now" << endl;
+                EV << "*********************************************************" << endl;
+                // Signal
+                emit(sig_timePlayerStart, simTime().dbl());
+
+                m_id_nextChunk = nextPosition;
+                if (m_id_nextChunk <= m_videoBuffer->getBufferStartSeqNum())
+                    m_id_nextChunk = m_videoBuffer->getBufferStartSeqNum();
+                else if (m_id_nextChunk > m_videoBuffer->getBufferEndSeqNum())
+                    throw cException("Expected sequence number %ld is out of range [%ld, %ld]",
+                                     m_id_nextChunk,
+                                     m_videoBuffer->getBufferStartSeqNum(),
+                                     m_videoBuffer->getBufferEndSeqNum());
+
+                // -- Change state to PLAYING
+                m_state = PLAYER_STATE_PLAYING;
+
+                // listening support ->
+                    std::vector<PlayerListener*>::iterator it;
+                    for(it = mListeners.begin(); it != mListeners.end(); it++){
+                        (*it)->onPlayerStarted();
+                    }
+                // <- listening support
+
+                scheduleAt(simTime() + m_videoBuffer->getChunkInterval(), timer_nextChunk);
+            }else{ // wait until we find a valid starting position ...
                 scheduleAt(simTime() + param_interval_probe_playerStart, timer_playerStart);
-            }
-            else
-            {
-                int nextPosition = findNextPlayablePosition();
-
-                if (nextPosition >= 0){
-                    EV << "*********************************************************" << endl;
-                    EV << "Player starts now" << endl;
-                    EV << "*********************************************************" << endl;
-                    // Signal
-                    emit(sig_timePlayerStart, simTime().dbl());
-
-                    m_id_nextChunk = nextPosition;
-                    if (m_id_nextChunk <= m_videoBuffer->getBufferStartSeqNum())
-                        m_id_nextChunk = m_videoBuffer->getBufferStartSeqNum();
-                    else if (m_id_nextChunk > m_videoBuffer->getBufferEndSeqNum())
-                        throw cException("Expected sequence number %ld is out of range [%ld, %ld]",
-                                         m_id_nextChunk,
-                                         m_videoBuffer->getBufferStartSeqNum(),
-                                         m_videoBuffer->getBufferEndSeqNum());
-
-                    // -- Change state to PLAYING
-                    m_state = PLAYER_STATE_PLAYING;
-
-                    // listening support ->
-                        std::vector<PlayerListener*>::iterator it;
-                        for(it = mListeners.begin(); it != mListeners.end(); it++){
-                            (*it)->onPlayerStarted();
-                        }
-                    // <- listening support
-
-                    scheduleAt(simTime() + m_videoBuffer->getChunkInterval(), timer_nextChunk);
-                }else{ // wait until we find a valid starting position ...
-                    scheduleAt(simTime() + param_interval_probe_playerStart/10, timer_playerStart); // schedule at a faster rate, because we now have a higher probability that we can start next time
-                }
             }
             break;
         }
@@ -296,33 +275,11 @@ SEQUENCE_NUMBER_T PlayerBufferSkip::getCurrentPlaybackPoint(void)
     return m_id_nextChunk;
 }
 
-SEQUENCE_NUMBER_T PlayerBufferSkip::getPrefferedNextChunk(){
-    /*SEQUENCE_NUMBER_T target = m_videoBuffer->getBufferStartSeqNum() + (m_videoBuffer->getSize() / 4);
-    if (m_id_nextChunk < target) // always target a position which is atleast around 25% fill
-        return target;*/
-
-    if (m_id_nextChunk < m_videoBuffer->getBufferStartSeqNum())
-        return m_videoBuffer->getBufferStartSeqNum();
-
-    return m_id_nextChunk;
-}
-
 bool PlayerBufferSkip::playerStarted(void)
 {
     //return m_playerStarted;
     return (m_state == PLAYER_STATE_PLAYING);
 }
-
-bool PlayerBufferSkip::shouldResumePlaying(SEQUENCE_NUMBER_T seq_num)
-{
-    // !!! Asuming that the seq_num is a valid value within the range [id_start, id_end]
-
-    if (m_videoBuffer->getPercentFillAhead(seq_num) >= 0.5)
-        return true;
-
-    return false;
-}
-
 
 void PlayerBufferSkip::addListener(PlayerListener* listener){
     mListeners.push_back(listener);
@@ -333,4 +290,10 @@ void PlayerBufferSkip::removeListener(PlayerListener* listener){
         if ( (*it) == listener )
             mListeners.erase(it);
     }
+}
+
+void PlayerBufferSkip::stopPlayer(void){
+    cancelEvent(timer_nextChunk);
+    m_playerStarted = false;
+    m_state = PLAYER_STATE_IDLE;
 }
