@@ -28,6 +28,8 @@
 #include "VideoBufferListener.h"
 #include "GossipListener.h"
 
+#include "MTreeBoneSettings.h"
+
 #include <fstream>
 
 class MTreeBoneBase : public CommBase, public VideoBufferListener, public GossipListener {
@@ -37,7 +39,7 @@ public:
 
     void handleMessage(cMessage *msg);
 
-    virtual void onNewChunk(IPvXAddress src, int sequenceNumber);
+    virtual void onNewChunk(IPvXAddress src, int sequenceNumber, int hopcount);
 
     virtual void onGossipDataReceived();
 

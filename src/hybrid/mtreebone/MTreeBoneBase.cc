@@ -161,12 +161,14 @@ void MTreeBoneBase::handleTimerMessage(cMessage *msg){
         EV << "uploaded:" << m_ChunksUploaded << "  , denied: " << m_ChunksDenied << "  , +debug: " << m_DebugOutput << endl;
         m_videoBuffer->printStatus();
 
-        m_outFileDebug << simTime() << " video buffer state: " << m_videoBuffer->getBufferStartSeqNum() << " - " << m_videoBuffer->getBufferEndSeqNum() << " , missing: " << m_videoBuffer->getNumberOfCurrentlyMissingChunks() << endl;
+        m_outFileDebug << simTime() << " [VIDEO_BUFFER] state: " << m_videoBuffer->getBufferStartSeqNum() << " - " << m_videoBuffer->getBufferEndSeqNum() << " , missing: " << m_videoBuffer->getNumberOfCurrentlyMissingChunks() << endl;
 
         std::map<IPvXAddress, MTreeBonePeerInformation*>::iterator iter; // loop through all neighbors
         for(iter = m_Neighbors.begin();iter != m_Neighbors.end(); ++ iter)
         {
-            sendToDispatcher(map->dup(), m_localPort, (*iter).first, m_destPort); // send a copy
+            MTreeBoneBufferMapPacket* temp = map->dup();
+            temp->setTempYouAreMyParent(m_Stripes[0].Parent.equals((*iter).first));
+            sendToDispatcher(temp, m_localPort, (*iter).first, m_destPort); // send a copy
         }
 
         delete map; // delete prepared packet
@@ -188,9 +190,6 @@ void MTreeBoneBase::processPacket(cPacket *pkt)
     EV << "received packet: " << csp->getPacketType() << " @ " << m_localAddress.str() << endl;
     m_outFileDebug << simTime().str() << " [DEBUG] received packet " << csp->getPacketType() << " from " << src.str() << endl;
 
-    //MTreeBonePeerInformationPacket* peerInfo ;
-    //genericList<IPvXAddress> children; genericList<IPvXAddress>::iterator it;
-
     switch (csp->getPacketType()){
         case MTREEBONE_NEIGHBOR_REQUEST:
             processNeighborRequest(src, check_and_cast<MTreeBoneNeighborRequestPacket *> (pkt));
@@ -198,17 +197,18 @@ void MTreeBoneBase::processPacket(cPacket *pkt)
         case MTREEBONE_NEIGHBOR_REQUEST_RESPONSE:
             processNeighborRequestResponse(src, check_and_cast<MTreeBoneNeighborRequestResponsePacket *> (pkt));
             break;
-//        case MTREEBONE_CHUNK_REQUEST:
-//            // support removed
-//            //handleChunkRequest(src, check_and_cast<MTreeBoneChunkRequestPacket *> (pkt));
-//            break;
         case MTREEBONE_CHUNK_REQUEST_LIST:
             handleChunkRequestList(src, check_and_cast<MTreeBoneChunkRequestListPacket *> (pkt));
             break;
         case MTREEBONE_BUFFER_MAP:
             info = getPeerInformation(src);
-            if (info != NULL)
-                info->updateFromBufferMap(check_and_cast<MTreeBoneBufferMapPacket *> (pkt));
+            if (info != NULL){
+                MTreeBoneBufferMapPacket* pBufferMapPacket = check_and_cast<MTreeBoneBufferMapPacket *> (pkt);
+
+                if ((!pBufferMapPacket->getTempYouAreMyParent()) && (m_Stripes[0].Children.containsItem(src)))
+                        m_outFileDebug << simTime().str() << " [DEBUG_PARENT_ERROR] have child but he doesnt have us as parent! " << src.str() << endl;
+                info->updateFromBufferMap(pBufferMapPacket);
+            }
             if (info != NULL)
                 m_outFileDebug << simTime().str() << " [DEBUG] head= " << info->getSequenceNumberEnd() << endl;
             break;
@@ -222,24 +222,6 @@ void MTreeBoneBase::processPacket(cPacket *pkt)
                     info->setDistance(i, (check_and_cast<MTreeBonePeerInformationPacket*> (pkt))->getDistance(i) );
                     info->setNumChildren(i, (check_and_cast<MTreeBonePeerInformationPacket*> (pkt))->getNumChildren(i) );
                 }
-
-            /*peerInfo = new MTreeBonePeerInformationPacket();
-            peerInfo->setDistanceArraySize(param_numStripes);
-            peerInfo->setNumChildrenArraySize(param_numStripes);
-            for (unsigned int i = 0; i < param_numStripes; i++){
-                peerInfo->setDistance(i, getMyDistance(i));
-                peerInfo->setNumChildren(i, m_Stripes[i].Children.size());
-            }
-
-
-            for (unsigned int i = 0; i < param_numStripes; i++)
-                for (it = m_Stripes[i].Children.begin(); it != m_Stripes[i].Children.end(); it++)
-                    children.addItem(*it);
-
-            for (it = children.begin(); it != children.end(); it++)
-                sendToDispatcher(peerInfo->dup(), m_localPort, *it, m_destPort);
-
-            delete peerInfo;*/
 
             break;
         case MTREEBONE_REPLACE_CHILD:
@@ -281,6 +263,9 @@ void MTreeBoneBase::handleParentRequest(IPvXAddress src, MTreeBoneParentRequestP
 }
 
 void MTreeBoneBase::removeChild(int stripe, IPvXAddress addr){
+
+    m_Stripes[stripe].Children.removeItem(addr);
+
     MTreeBoneParentRequestResponsePacket* resp = new MTreeBoneParentRequestResponsePacket();
     resp->setStripeNumber(stripe);
     resp->setIsAccepted(false);
@@ -297,8 +282,7 @@ MTreeBoneBufferMapPacket* MTreeBoneBase::prepareBufferMap(){
 
     // set buffermap
     ret->setBufferMapArraySize(m_videoBuffer->getSize());
-    //for (unsigned int i = 0; i < ret->getBufferMapArraySize(); i++)
-//        ret->setBufferMap(i, m_videoBuffer->inBuffer(i));
+
     for (int i = m_videoBuffer->getBufferStartSeqNum(); i <= m_videoBuffer->getHeadReceivedSeqNum(); i++)
         ret->setBufferMap(i % ret->getBufferMapArraySize(), m_videoBuffer->inBuffer(i));
     ret->setSequenceNumberStart(m_videoBuffer->getBufferStartSeqNum());
@@ -404,7 +388,7 @@ MTreeBonePeerInformation* MTreeBoneBase::getPeerInformation(IPvXAddress addr){
     return it->second;
 }
 
-void MTreeBoneBase::onNewChunk(IPvXAddress src, int sequenceNumber){
+void MTreeBoneBase::onNewChunk(IPvXAddress src, int sequenceNumber, int hopcount){
     // takeover context, because we may send something
     cComponent* origContext = simulation.getContext();
     simulation.setContext(this);
@@ -414,7 +398,14 @@ void MTreeBoneBase::onNewChunk(IPvXAddress src, int sequenceNumber){
 
     bool count = false;
 
+    MTreeBonePeerInformation* info;
+
     for ( it = m_Stripes[stripe].Children.begin(); it != m_Stripes[stripe].Children.end(); it++){
+
+        info = getPeerInformation((*it));
+        if ( (info != NULL) && (info->getSequenceNumberEnd() >= sequenceNumber))    // assume peer already has the chunk if his head is before this chunk
+            continue;
+
         m_ChunksUploaded++;
         m_ChunksLeftForWindow--;
 
@@ -567,17 +558,6 @@ bool MTreeBoneBase::isBoneNodeForStripe(int stripe){
 
 int MTreeBoneBase::getMyDistance(int stripe){
     int ret = -1;
-
-    // "pull"-distance
-    /*
-    std::map<IPvXAddress, MTreeBonePeerInformation*>::iterator it;
-    for (it = m_Neighbors.begin(); it != m_Neighbors.end(); it++){
-        int dist = it->second->getDistance();
-        if ( (dist >= 0) &&
-             ( (dist < ret) || (ret < 0) ) )
-            ret = dist;
-    }
-    */
 
     // "push"-distance
     MTreeBonePeerInformation* info;
