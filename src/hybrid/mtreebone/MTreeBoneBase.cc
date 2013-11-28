@@ -227,6 +227,9 @@ void MTreeBoneBase::processPacket(cPacket *pkt)
         case MTREEBONE_REPLACE_CHILD:
             handleReplaceChild(src, check_and_cast<MTreeBonePeerReplaceChildPacket*> (pkt));
             break;
+        case MTREEBONE_SWITCH_POSITION_REQUEST: // handle request
+            // maybe a child send a request ... just ignore it :D
+            break;
         default:
         {
             throw cException("Unrecognized packet type!");
@@ -239,6 +242,7 @@ void MTreeBoneBase::handleParentRequest(IPvXAddress src, MTreeBoneParentRequestP
 
     if (pkt->getAbort()){ // peer doesnt want to be our children anymore
         m_Stripes[stripe].Children.removeItem(src);
+        m_outFileDebug << simTime().str() << " [PARENTING] got remove from " << src.str() << " for stripe: " << stripe << endl;
         return;
     }
 
@@ -248,11 +252,17 @@ void MTreeBoneBase::handleParentRequest(IPvXAddress src, MTreeBoneParentRequestP
     // same max number of children for all stripes TODO: think about making it 1 + x ?
     bool accepted = ((param_MaxUploadFactor - m_Stripes[stripe].Children.size()) > 1) || (m_Stripes[stripe].Children.containsItem(src));
     accepted = accepted && isBoneNodeForStripe(stripe);
+    accepted = accepted && (m_videoBuffer->getBufferEndSeqNum() >= pkt->getOwnHead()); // only accept children which are not ahead of us
 
     resp->setIsAccepted( accepted );
 
     if ( (resp->getIsAccepted()) && (!(m_Stripes[stripe].Children.containsItem(src))) ){
         addNeighbor(src, stripe);
+
+        // set head in order to prevent duplicates
+        MTreeBonePeerInformation* info = getPeerInformation(src);
+        info->setSequenceNumberEnd(pkt->getOwnHead());
+
         m_Stripes[stripe].Children.addItem(src);
         checkFreeUploadListState();
     }
@@ -264,6 +274,7 @@ void MTreeBoneBase::handleParentRequest(IPvXAddress src, MTreeBoneParentRequestP
 
 void MTreeBoneBase::removeChild(int stripe, IPvXAddress addr){
 
+    m_outFileDebug << simTime().str() << " [CHILD] remove child " << addr.str() << " for stripe: " << stripe << endl;
     m_Stripes[stripe].Children.removeItem(addr);
 
     MTreeBoneParentRequestResponsePacket* resp = new MTreeBoneParentRequestResponsePacket();
