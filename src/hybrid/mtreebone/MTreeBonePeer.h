@@ -44,6 +44,7 @@ protected:
     virtual void handleTimerMessage(cMessage *msg);
     virtual void processPacket(cPacket *pkt);
 
+    void requestParentShip(int stripe, IPvXAddress addr);
     void removeParent(int stripe);
 private:
     // timer
@@ -63,6 +64,9 @@ private:
 
     void checkNeighbors();
     void checkParents();
+
+    IPvXAddress findBetterParent(int stripe);
+    IPvXAddress findSwapCandidate(int stripe);
 
     bool wantToBeBoneNode(int stripe); // simple method to disable the usage of push/parents};
 
