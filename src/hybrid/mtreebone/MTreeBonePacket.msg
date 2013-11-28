@@ -120,6 +120,8 @@ packet MTreeBoneParentRequestPacket extends MTreeBonePacket
 	
 	unsigned int stripeNumber;
 	bool abort;
+	
+	unsigned int ownHead;
 }
 
 packet MTreeBoneParentRequestResponsePacket extends MTreeBonePacket
