@@ -18,6 +18,7 @@
 
 #include "MTreeBonePacket_m.h"
 #include "MTreeBoneGossipData.h"
+#include "AppCommon.h"
 
 class MTreeBonePeerInformation {
 public:
@@ -61,6 +62,8 @@ public:
 
     void setDistance(int stripe, int value){distance[stripe] = value;}
     void setNumChildren(int stripe, int value){numChildren[stripe] = value;}
+
+    void setSequenceNumberEnd(SEQUENCE_NUMBER_T newHead){sequenceNumberEnd = newHead;}
 private:
     unsigned int sequenceNumberStart;
     unsigned int sequenceNumberEnd;
