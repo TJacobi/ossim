@@ -7,7 +7,9 @@ import so.mesh.PartnerList;
 import so.payload.ChunkGenerator;
 import so.payload.Forwarder;
 import so.payload.VideoBuffer;
+
 import so.membership.newscast.NewscastPeer;
+import so.membership.tracker.SimpleGossipingTrackerAdapter;
 
 import so.membership.dummy.DummyMembership;
 
@@ -49,7 +51,8 @@ module MTreeBoneSourceApp
             @display("p=51,173;i=block/users");
         }
         
-        gossipProtocol : NewscastPeer;
+        //gossipProtocol : NewscastPeer;
+        gossipProtocol : SimpleGossipingTrackerAdapter;
         
         dispatcher: Dispatcher {
             @display("p=133,253;i=block/dispatch");

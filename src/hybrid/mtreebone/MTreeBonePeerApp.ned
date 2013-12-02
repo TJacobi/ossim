@@ -12,6 +12,7 @@ import so.payload.PlayerBufferSkip;
 //import simpleoverlay.global.AppSettingDonet;
 
 import so.membership.newscast.NewscastPeer;
+import so.membership.tracker.SimpleGossipingTrackerAdapter;
 
 import so.membership.dummy.DummyMembership;
 
@@ -53,7 +54,8 @@ module MTreeBonePeerApp
             @display("p=51,173;i=block/users");
         }
 
-        gossipProtocol : NewscastPeer;
+        //gossipProtocol : NewscastPeer;
+        gossipProtocol : SimpleGossipingTrackerAdapter;
         
         dispatcher: Dispatcher {
             @display("p=132,247;i=block/dispatch");
