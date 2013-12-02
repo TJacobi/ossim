@@ -23,6 +23,9 @@ import inet.networklayer.autorouting.FlatNetworkConfigurator;
 import so.hybrid.mtreebone.MTreeBoneSourceNode;
 import so.hybrid.mtreebone.MTreeBonePeerNode;
 import so.hybrid.mtreebone.MTreeBoneStats;
+import so.hybrid.mtreebone.MTreeBoneSettings;
+
+import so.membership.tracker.GossipingTracker;
 
 network MTreeBone_Homo_oneRouter_Network extends BasicNetwork
 {
@@ -43,8 +46,8 @@ network MTreeBone_Homo_oneRouter_Network extends BasicNetwork
         }
         channel Channel_homo_up extends ned.DatarateChannel
         {
-            datarate = uniform(800kbps,1600kbps );//2-4
-            //datarate = uniform(1600kbps,4800kbps );//4-12
+            //datarate = uniform(800kbps,1600kbps );//2-4
+            datarate = uniform(1600kbps,4800kbps );//4-12
         }
         channel Channel_homo_down extends ned.DatarateChannel
         {
@@ -75,6 +78,10 @@ network MTreeBone_Homo_oneRouter_Network extends BasicNetwork
         }
         
         MTreeBoneStats: MTreeBoneStats{}
+		
+		MTreeBoneSettings: MTreeBoneSettings{}
+		
+		GossipingTracker: GossipingTracker{}
 
         globalStatistic: <statisticModule> like IStreamingStatistic {
             @display("p=77,248;i=device/disk");
