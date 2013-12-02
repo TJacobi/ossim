@@ -401,108 +401,6 @@ void MTreeBonePeer::checkParents(){
             }
         }
 
-        /*if (m_Stripes[stripe].isBoneNode()){ // we have a parent
-            // but we can check if there is a better parent ...
-            int currentDistance = getPeerInformation( m_Stripes[stripe].Parent )->getDistance(stripe);
-
-            // check if we can switch with parent
-            info = getPeerInformation(m_Stripes[stripe].Parent);
-            if ((debugOutput) && ( m_Stripes[stripe].Children.size() > 1 ))
-                m_outFileDebug << simTime().str() << " [DEBUG] children=" << info->getNumChildren(stripe) << "," << m_Stripes[stripe].Children.size() << endl;
-            if ( (info->getDistance(stripe) > 0) && (m_Stripes[stripe].Children.size() > info->getNumChildren(stripe)) && (info->getNumChildren(stripe) > 0) ){
-                if (debugOutput)
-                    m_outFileDebug << simTime().str() << " [SWITCH] switching position with: " << m_Stripes[stripe].Parent.str() << " for stripe: " << stripe << endl;
-
-                MTreeBonePeerSwitchPostionRequestPacket* req = new MTreeBonePeerSwitchPostionRequestPacket();
-                req->setStripe(stripe);
-                req->setSuggestedNewParent(m_Stripes[stripe].Parent);
-                sendToDispatcher(req, m_localPort, m_Stripes[stripe].Parent, m_destPort);
-                continue;
-            }
-
-            // check neighbors
-            genericList<IPvXAddress> possible;
-            std::vector<IPvXAddress>::iterator it;
-            for (it = m_Stripes[stripe].Neighbors.begin(); it != m_Stripes[stripe].Neighbors.end(); it++){
-                info = getPeerInformation(*it);
-                if (info == NULL) continue;
-
-                if ( (info->getDistance(stripe) < currentDistance) &&
-                        (info->getDistance(stripe) >= 0) &&
-                        (info->getSequenceNumberEnd() > mPlayer->getCurrentPlaybackPoint())
-                   ){
-                    if (debugOutput)
-                        m_outFileDebug << simTime().str() << " [PARENTSELECTION]a adding possible " << (*it).str() << " distance " << info->getDistance(stripe) << endl;
-                    possible.addItem(*it);
-                }
-            }
-
-            std::vector<IPvXAddress> gossipAddr = m_Gossiper->getKnownPeers();
-            // for switching position
-            IPvXAddress switchTo = IPAddress("0.0.0.0");
-            int switchDistance   = -1;
-
-            for (it = gossipAddr.begin(); it != gossipAddr.end(); it++){
-                GossipUserData* userData = m_Gossiper->getPeerData(*it);
-                if (userData == NULL) continue;
-
-                //m_outFileDebug << simTime().str() << " [DEBUG] new parent selection 1" << endl;
-                MTreeBoneGossipData* data = check_and_cast<MTreeBoneGossipData*> (userData);
-                //m_outFileDebug << simTime().str() << " [DEBUG] new parent selection 2" << endl;
-                if ( (!data->getIsBoneNode(stripe)) || (data->getDistance(stripe) >= currentDistance) || (data->getDistance(stripe) < 0)){
-                    delete userData;
-                    continue;
-                }
-
-                //if ((data->getNumChildren(stripe) < m_Stripes[stripe].Children.size()) && ( data->getDistance(stripe) > 0 )){
-                //    if ( (switchDistance < 0) || (data->getDistance(stripe) < switchDistance) ){
-                 //       switchTo = *it;
-                  //      switchDistance = data->getDistance(stripe);
-                 //       switchCounter++;
-                 //   }
-                //}
-                //m_outFileDebug << simTime().str() << " [DEBUG] new parent selection 3" << endl;
-                if (debugOutput)
-                    m_outFileDebug << simTime().str() << " [PARENTSELECTION]b adding possible " << (*it).str() << " distance " << data->getDistance(stripe) << endl;
-                possible.addItem(*it);
-                delete userData;
-                //m_outFileDebug << simTime().str() << " [DEBUG] new parent selection 4" << endl;
-            }
-
-            possible.removeItem(m_localAddress);
-
-            if ((switchDistance > 0) && (uniform(0,1) < 0.25)){
-                if (debugOutput)
-                    m_outFileDebug << simTime().str() << " [SWITCH] switching position with: " << switchTo.str() << " for stripe: " << stripe << endl;
-
-                MTreeBonePeerSwitchPostionRequestPacket* req = new MTreeBonePeerSwitchPostionRequestPacket();
-                req->setStripe(stripe);
-                req->setSuggestedNewParent(m_Stripes[stripe].Parent);
-                sendToDispatcher(req, m_localPort, switchTo, m_destPort);
-            }else if (possible.size() > 0){ // no better parents here ...
-                int pos = intrand(possible.size());
-                IPvXAddress query = possible.at(pos);
-
-                MTreeBoneParentRequestPacket* req = new MTreeBoneParentRequestPacket();
-                req->setStripeNumber(stripe);
-                req->setAbort(false);
-
-                sendToDispatcher(req, m_localPort, query, m_destPort);
-                m_Stripes[stripe].nextParentRequest = simTime() + 3;
-
-                if (debugOutput)
-                    m_outFileDebug << simTime().str() << " [PARENT] send request to " << query.str() << " for stripe: "<< req->getStripeNumber() << " _ isNeigbor? " << m_Stripes[stripe].Neighbors.containsItem(query) << endl;
-            }
-
-            continue;// Done with this stripe
-        }else{*/ // not a bone node for this stripe
-            /*if ((m_Stripes[stripe].Children.size() > 0) && (intrand(5) == 1)){ // but we have children
-                removeChild(stripe, m_Stripes[stripe].Children.at(0)); // randomly drop the first child -> Intention: maybe the child can find a better parent than we can and later we may adapt the child as a parent ...
-            }*/
-
-        //}
-
-
     }
 }
 
@@ -809,10 +707,6 @@ bool MTreeBonePeer::wantToBeBoneNode(int stripe){
     simtime_t stayedfor = simTime() - par("joinTime").doubleValue();
     simtime_t remaining = remaining.parse(ev.getConfig()->getConfigValue("sim-time-limit")) - simTime();//*2 for testing
 
-    // test for early promotion -> this test can lead to a node wanting to be a bonenode->connecting->failed or disconnected-> not want to be a bonenode anymore ...
-    //double test = (remaining-stayedfor).dbl();
-    //test = 1 / test;
-
     /*
      *  k       x
         0.5     0.25
@@ -829,11 +723,12 @@ bool MTreeBonePeer::wantToBeBoneNode(int stripe){
     if (MTreeBoneSettings::theSettings != NULL)
         kResult = MTreeBoneSettings::theSettings->getKResult();
 
-    /*if ((remaining * kResult - stayedfor.dbl() + 1) > 0){
+    // test for early promotion -> this test can lead to a node wanting to be a bonenode->connecting->failed or disconnected-> not want to be a bonenode anymore ...
+    if ((remaining * kResult - stayedfor.dbl() + 1) > 0){
         double test;
         test = 1 / (remaining * kResult - stayedfor.dbl() + 1);
         if (dblrand() < test) return true;
-    }*/
+    }
 
     return ( stayedfor > remaining * kResult);
     return !param_DisablePush;
