@@ -57,12 +57,12 @@ public:
     virtual std::vector<IPvXAddress> getKnownPeers();
 
     // -- Old interface
-    virtual void addSourceAddress(const IPvXAddress &address, int maxNOP=0) = 0;
-    virtual void addPeerAddress(const IPvXAddress &address, int maxNOP=0) = 0;
-    virtual bool deletePeerAddress(const IPvXAddress &address) = 0;
+    virtual void addSourceAddress(const IPvXAddress &address, int maxNOP=0){};
+    virtual void addPeerAddress(const IPvXAddress &address, int maxNOP=0){};
+    virtual bool deletePeerAddress(const IPvXAddress &address){return false;};
 
-    virtual void incrementNPartner(const IPvXAddress &addr) = 0;
-    virtual void decrementNPartner(const IPvXAddress &addr) = 0;
+    virtual void incrementNPartner(const IPvXAddress &addr){};
+    virtual void decrementNPartner(const IPvXAddress &addr){};
 
     // listening support
     void addListener(GossipListener* listener){
