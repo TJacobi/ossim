@@ -63,6 +63,9 @@ void MTreeBoneSettings::initialize(int stage){
          */
     int kMode = par("kValueMode");
     switch (kMode){
+        case 0: // disable
+                m_KResult = 0.0;
+                break;
         case 1: // k = 0.5
                 m_KResult = 0.25;
                 break;

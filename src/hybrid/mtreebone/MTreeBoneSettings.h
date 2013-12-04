@@ -29,7 +29,7 @@ public:
 
     static MTreeBoneSettings* theSettings; // global pointer for easier acces
 
-    int getNumberOfStripes(){return m_Stripes;}
+    inline int getNumberOfStripes(){return m_Stripes;}
     double getKResult(){return m_KResult;}
 protected:
     int m_Stripes;

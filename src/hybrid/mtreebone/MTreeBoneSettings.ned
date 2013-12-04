@@ -16,7 +16,7 @@ simple MTreeBoneSettings
         int NumberOfPartnersMaximum  = default (16);
         int NumberOfPartnersDesired  = default(8);
         
-        int kValueMode = default(0);
+        int kValueMode = default(4);
 	//bool enablePeriodicalStructureOutput = default(true);
 
 	//string newscastGetRandomIPsLOG = default("newscastGetRandomIPs.txt");

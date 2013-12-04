@@ -24,6 +24,8 @@ Define_Module(MTreeBonePeer);
 MTreeBonePeer::MTreeBonePeer(){
     globalUp = globalDown = 0;
     m_PlayerPosition = 0;
+
+    timer_joinNetwork = timer_leaveNetwork = timer_checkNeighbors = timer_chunkScheduler = NULL;
 }
 
 MTreeBonePeer::~MTreeBonePeer() {
@@ -32,9 +34,9 @@ MTreeBonePeer::~MTreeBonePeer() {
     if (timer_leaveNetwork)
         cancelAndDelete(timer_leaveNetwork); timer_leaveNetwork = NULL;
     if (timer_checkNeighbors)
-            cancelAndDelete(timer_checkNeighbors); timer_checkNeighbors = NULL;
+        cancelAndDelete(timer_checkNeighbors); timer_checkNeighbors = NULL;
     if (timer_chunkScheduler)
-            cancelAndDelete(timer_chunkScheduler); timer_chunkScheduler = NULL;
+        cancelAndDelete(timer_chunkScheduler); timer_chunkScheduler = NULL;
 }
 
 void MTreeBonePeer::initialize(int stage){

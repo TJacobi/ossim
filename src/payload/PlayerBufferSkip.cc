@@ -34,13 +34,14 @@
 Define_Module(PlayerBufferSkip)
 
 PlayerBufferSkip::PlayerBufferSkip() {
-    // TODO Auto-generated constructor stub
+    timer_nextChunk   = NULL;
+    timer_playerStart = NULL;
 }
 
 PlayerBufferSkip::~PlayerBufferSkip()
 {
-    if (timer_nextChunk != NULL) { delete cancelEvent(timer_nextChunk); timer_nextChunk = NULL; }
-    if (timer_playerStart) cancelAndDelete(timer_playerStart);
+    if (timer_nextChunk   != NULL) cancelAndDelete(timer_nextChunk);   timer_nextChunk   = NULL;
+    if (timer_playerStart != NULL) cancelAndDelete(timer_playerStart); timer_playerStart = NULL;
 }
 
 void PlayerBufferSkip::initialize(int stage)
@@ -260,6 +261,7 @@ void PlayerBufferSkip::handleTimerMessage(cMessage *msg)
 void PlayerBufferSkip::startPlayer()
 {
     Enter_Method("startPlayer");
+    if (timer_nextChunk != NULL) cancelAndDelete(timer_nextChunk); timer_nextChunk = new cMessage("PLAYER_TIMER_NEXT_CHUNK");
     scheduleAt(simTime(), timer_nextChunk);
 
     EV << "Player starts with chunk " << m_id_nextChunk << endl;
@@ -293,7 +295,7 @@ void PlayerBufferSkip::removeListener(PlayerListener* listener){
 }
 
 void PlayerBufferSkip::stopPlayer(void){
-    cancelEvent(timer_nextChunk);
+    cancelAndDelete(timer_nextChunk); timer_nextChunk = NULL;
     m_playerStarted = false;
     m_state = PLAYER_STATE_IDLE;
 }

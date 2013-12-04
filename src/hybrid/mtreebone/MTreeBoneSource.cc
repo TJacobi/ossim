@@ -20,7 +20,7 @@ Define_Module(MTreeBoneSource);
 #include "MTreeBoneStats.h"
 
 MTreeBoneSource::MTreeBoneSource(){
-
+    timer_joinNetwork = NULL;
 }
 
 MTreeBoneSource::~MTreeBoneSource() {

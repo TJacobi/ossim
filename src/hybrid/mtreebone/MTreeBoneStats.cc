@@ -36,7 +36,10 @@ void MTreeBoneStats::initialize(int stage){
         AppSettingDonet* m_appSetting = dynamic_cast<AppSettingDonet *>(temp);
         if (m_appSetting == NULL) throw cException("m_appSetting == NULL is invalid");
 
+        m_PeerOutput << "Duration: " << ev.getConfig()->getConfigValue("sim-time-limit") << endl;
         m_PeerOutput << "Chunksize: " << m_appSetting->getChunkSize() << endl;
+        if (MTreeBoneSettings::theSettings != NULL)
+            m_PeerOutput << "K = " << MTreeBoneSettings::theSettings->getKResult() << endl;
     }
 
 
