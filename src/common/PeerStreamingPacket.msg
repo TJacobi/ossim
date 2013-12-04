@@ -36,7 +36,6 @@ enum StreamingPacketGroup
     PACKET_GROUP_MESH_OVERLAY       = 1;
     PACKET_GROUP_VIDEO_CHUNK        = 2;
     PACKET_GROUP_TREE_OVERLAY       = 3;
-    PACKET_GROUP_HYBRID_OVERLAY     = 4;
 }
 
 packet PeerStreamingPacket

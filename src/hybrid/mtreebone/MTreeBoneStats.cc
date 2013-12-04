@@ -1,5 +1,6 @@
 #include "MTreeBoneStats.h"
 #include "MTreeBonePacket_m.h"
+#include "MTreeBoneSettings.h"
 
 MTreeBoneStats* MTreeBoneStats::theStats = NULL;
 
@@ -38,8 +39,10 @@ void MTreeBoneStats::initialize(int stage){
 
         m_PeerOutput << "Duration: " << ev.getConfig()->getConfigValue("sim-time-limit") << endl;
         m_PeerOutput << "Chunksize: " << m_appSetting->getChunkSize() << endl;
-        if (MTreeBoneSettings::theSettings != NULL)
+        if (MTreeBoneSettings::theSettings != NULL){
+            m_PeerOutput << "Chunks per second: " << MTreeBoneSettings::theSettings->getChunksPerSecond() << endl;
             m_PeerOutput << "K = " << MTreeBoneSettings::theSettings->getKResult() << endl;
+        }
     }
 
 
