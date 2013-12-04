@@ -29,8 +29,13 @@ public:
 
     static MTreeBoneSettings* theSettings; // global pointer for easier acces
 
-    inline int getNumberOfStripes(){return m_Stripes;}
-    double getKResult(){return m_KResult;}
+    inline unsigned int getNumberOfStripes()    {return m_Stripes;}
+    inline double getKResult()                  {return m_KResult;}
+    inline double getChunksPerSecond()          {return m_ChunksPerSecond;}
+    inline double getBufferMapIntervall()       {return m_BufferMapIntervall;}
+
+    inline int getNumbersOfPartnersMax()        {return m_MaxNumberOfPartners;}
+    inline int getNumbersOfPartnersDesired()    {return m_DesiredNumberOfPartners;}
 protected:
     int m_Stripes;
     double m_ChunkScheduleIntervall, m_ChunkRequestTimeout;
@@ -38,6 +43,7 @@ protected:
     double m_BufferMapIntervall;
 
     double m_KResult;
+    double m_ChunksPerSecond;
 };
 
 #endif /* MTREEBONESETTINGS_H_ */

@@ -91,7 +91,7 @@ void MTreeBonePeer::handleTimerMessage(cMessage *msg){
         //MTreeBoneStats::theStats->removePeer(this); // unregister
         MTreeBoneStats::theStats->peerLeavedNetwork(this);
         m_Gossiper->leaveNetwork();
-        for (unsigned int stripe = 0; stripe < param_numStripes; stripe++){
+        for (unsigned int stripe = 0; stripe < MTreeBoneSettings::theSettings->getNumberOfStripes(); stripe++){
             removeParent(stripe); // inform stripe parent that we are no longer a child
             while(m_Stripes[stripe].Children.size() > 0)
                 removeChild(stripe, m_Stripes[stripe].Children.at(0));
@@ -199,14 +199,14 @@ void MTreeBonePeer::onNewChunk(IPvXAddress src, int sequenceNumber, int hopcount
     globalDown++;
     m_ChunksReceived++;
 
-    int stripe = sequenceNumber % param_numStripes;
+    int stripe = sequenceNumber % MTreeBoneSettings::theSettings->getNumberOfStripes();
     MTreeBoneStats::theStats->chunkReceived(this, sequenceNumber, hopcount, m_Stripes[stripe].Parent.equals(src));
 
     MTreeBoneBase::onNewChunk(src, sequenceNumber, hopcount);
 }
 
 void MTreeBonePeer::onDuplicateChunk(IPvXAddress src, int sequenceNumber, int hopcount){
-    int stripe = sequenceNumber % param_numStripes;
+    int stripe = sequenceNumber % MTreeBoneSettings::theSettings->getNumberOfStripes();
 
     EV << endl << " MTreeBonePeer::onDuplicateChunk @ " << m_localAddress.str() << " -> " << sequenceNumber << " from " << src.str() << endl;
     if (debugOutput)
@@ -220,9 +220,9 @@ void MTreeBonePeer::checkNeighbors(){
     MTreeBonePeerInformation* info;
     std::vector<IPvXAddress>::iterator it;
 
-    for (unsigned int i = 0; i < param_numStripes; i++){
+    for (unsigned int i = 0; i < MTreeBoneSettings::theSettings->getNumberOfStripes(); i++){
         EV << "  Stripe: " << i << " partners: " << m_Stripes[i].Neighbors.size() << endl;
-        if (m_Stripes[i].Neighbors.size() >= param_desiredNOP){ // has enough neighbors, check if we want to kick someone
+        if (m_Stripes[i].Neighbors.size() >= MTreeBoneSettings::theSettings->getNumbersOfPartnersDesired()){ // has enough neighbors, check if we want to kick someone
             for (it = m_Stripes[i].Neighbors.begin(); it != m_Stripes[i].Neighbors.end(); it++){
                 info = getPeerInformation( *it );
                 if ((info == NULL) || (info->isProbablyDesertedPeer())){
@@ -242,8 +242,8 @@ void MTreeBonePeer::checkNeighbors(){
             }
         }
 
-        if (m_Stripes[i].Neighbors.size() < param_desiredNOP){ // stripe needs/wants more neighbors
-            for (int j = 0; j < (param_desiredNOP - m_Stripes[i].Neighbors.size()); j++){
+        if (m_Stripes[i].Neighbors.size() < MTreeBoneSettings::theSettings->getNumbersOfPartnersDesired()){ // stripe needs/wants more neighbors
+            for (int j = 0; j < (MTreeBoneSettings::theSettings->getNumbersOfPartnersDesired() - m_Stripes[i].Neighbors.size()); j++){
                 IPvXAddress addr = m_Gossiper->getRandomPeer(m_localAddress);
                 if ((!addr.isUnspecified()) && (!m_Stripes[i].Neighbors.containsItem(addr))){
                     MTreeBoneNeighborRequestPacket* request = new MTreeBoneNeighborRequestPacket();
@@ -251,7 +251,7 @@ void MTreeBonePeer::checkNeighbors(){
                     sendToDispatcher(request, m_localPort, addr, m_destPort);
                 }
             }
-        }else if(m_Stripes[i].Neighbors.size() > param_maxNOP){ // too many neighbors? shouldnt be possible ..
+        }else if(m_Stripes[i].Neighbors.size() > MTreeBoneSettings::theSettings->getNumbersOfPartnersMax()){ // too many neighbors? shouldnt be possible ..
             if (debugOutput)
                 m_outFileDebug << simTime().str() << " [NEIGHBOR] too many neighbors for stripe " << i << " : " << m_Stripes[i].Neighbors.size() << endl;
         }
@@ -359,7 +359,7 @@ void MTreeBonePeer::checkParents(){
     IPvXAddress addr;
     MTreeBonePeerInformation* info;
 
-    for (unsigned int stripe = 0; stripe < param_numStripes; stripe ++){
+    for (unsigned int stripe = 0; stripe < MTreeBoneSettings::theSettings->getNumberOfStripes(); stripe ++){
         if (m_Stripes[stripe].nextParentRequest > simTime()) // not waited long enough ...
             continue;
 
@@ -463,7 +463,7 @@ void MTreeBonePeer::doChunkSchedule(){
     if (mPlayer->playerStarted())
         m_PlayerPosition = mPlayer->getCurrentPlaybackPoint();
 
-    for (unsigned int i = 0; i < param_numStripes; i++)
+    for (unsigned int i = 0; i < MTreeBoneSettings::theSettings->getNumberOfStripes(); i++)
         doChunkSchedule(i);
 
     //if (head > m_ChunksPerSecond * 2) // wait till head is atleast 2 seconds ahead
@@ -495,7 +495,7 @@ int inline getRequestCountInMap(std::map<IPvXAddress, genericList<int> >* list, 
 
 void MTreeBonePeer::doChunkSchedule(unsigned int stripe){
     //m_PlayerPosition = mPlayer->getPrefferedNextChunk();
-    unsigned int oldestChunk = ((m_PlayerPosition % param_numStripes) == stripe)? m_PlayerPosition : m_PlayerPosition + (stripe - m_PlayerPosition % param_numStripes) + param_numStripes;
+    unsigned int oldestChunk = ((m_PlayerPosition % MTreeBoneSettings::theSettings->getNumberOfStripes()) == stripe)? m_PlayerPosition : m_PlayerPosition + (stripe - m_PlayerPosition % MTreeBoneSettings::theSettings->getNumberOfStripes()) + MTreeBoneSettings::theSettings->getNumberOfStripes();
     unsigned int newestChunk = m_PlayerPosition + m_ChunksPerSecond * 5;//m_videoBuffer->getSize()/2;
 
     if (m_Stripes[stripe].isBoneNode()){

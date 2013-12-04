@@ -62,12 +62,6 @@ void MTreeBoneBase::initBase() {
     m_destPort = getDestPort();
 
     // read parameters
-    // partnership
-    param_maxNOP     = par("maxNOP");
-    param_desiredNOP = par("desiredNOP");
-    param_BufferMapIntervall = par("BufferMapIntervall");
-    if (param_maxNOP < 1) param_maxNOP = 4;
-    if (param_desiredNOP < 1) param_desiredNOP = (param_maxNOP / 2) < 1 ? 1 : param_maxNOP / 2;
 
     // upload management
     param_MaxUploadFactor = par("MaxUploadFactor");
@@ -81,9 +75,7 @@ void MTreeBoneBase::initBase() {
     m_ChunksPerSecond = m_appSetting->getVideoStreamChunkRate();
     m_ChunksUploaded = 0;
     m_ChunksDenied = 0;
-    m_DebugOutput = 0;
-    param_numStripes  = m_appSetting->getNumberOfStripes();
-    m_Stripes = new MTreeBoneStripeInformation[param_numStripes];
+    m_Stripes = new MTreeBoneStripeInformation[MTreeBoneSettings::theSettings->getNumberOfStripes()];
 
     // read channel rate and adjust maxUploadFactor if necessary
     cDatarateChannel *channel = check_and_cast<cDatarateChannel *>(getParentModule()->getParentModule()->gate("pppg$o", 0)->getTransmissionChannel());
@@ -114,7 +106,7 @@ void MTreeBoneBase::initBase() {
     timer_sendBufferMaps = new cMessage("MTreeBoneBase: TIMER_SEND_BUFFERMAPS");
 
     // schedule timers
-    scheduleAt(simTime() + param_BufferMapIntervall, timer_sendBufferMaps);
+    scheduleAt(simTime() + MTreeBoneSettings::theSettings->getBufferMapIntervall(), timer_sendBufferMaps);
 }
 
 void MTreeBoneBase::handleMessage(cMessage *msg)
@@ -141,8 +133,8 @@ void MTreeBoneBase::handleTimerMessage(cMessage *msg){
         EV << " Player position: " << m_PlayerPosition << endl;
 
         EV << " Parents for Stripes: " << endl;
-        for (unsigned int i = 0; i < param_numStripes; i++){
-            if(m_Stripes[i].Neighbors.size() > param_maxNOP){ // too many neighbors? meh!
+        for (unsigned int i = 0; i < MTreeBoneSettings::theSettings->getNumberOfStripes(); i++){
+            if(m_Stripes[i].Neighbors.size() > MTreeBoneSettings::theSettings->getNumbersOfPartnersMax()){ // too many neighbors? meh!
                 IPvXAddress addr = m_Stripes[i].Neighbors.getRandomItem();
                 if ( (!m_Stripes[i].Parent.equals(addr)) && (!m_Stripes[i].Children.containsItem(addr)) ){ // do not remove children or parent
                     MTreeBoneNeighborRequestResponsePacket* quit = new MTreeBoneNeighborRequestResponsePacket();
@@ -156,9 +148,9 @@ void MTreeBoneBase::handleTimerMessage(cMessage *msg){
             EV << " Stripe " << i << ": " << ((m_Stripes[i].Parent.isUnspecified()) ? " NONE" : m_Stripes[i].Parent.str()) << endl;
         }
 
-        double avg = (double)m_ChunksUploaded * 100 / (m_ChunksUploaded + m_DebugOutput); //(double)m_ChunksUploaded*100 / (m_ChunksPerSecond * param_MaxUploadFactor * simTime());
-        EV << endl << "  Upload left: " << m_ChunksLeftForWindow << " / " << (m_ChunksPerSecond * param_MaxUploadFactor) << " , approx avg utilization: " << avg << endl << endl;
-        EV << "uploaded:" << m_ChunksUploaded << "  , denied: " << m_ChunksDenied << "  , +debug: " << m_DebugOutput << endl;
+        //double avg = (double)m_ChunksUploaded * 100 / (m_ChunksUploaded); //(double)m_ChunksUploaded*100 / (m_ChunksPerSecond * param_MaxUploadFactor * simTime());
+        //EV << endl << "  Upload left: " << m_ChunksLeftForWindow << " / " << (m_ChunksPerSecond * param_MaxUploadFactor) << " , approx avg utilization: " << avg << endl << endl;
+        //EV << "uploaded:" << m_ChunksUploaded << "  , denied: " << m_ChunksDenied << "  , +debug: " << m_DebugOutput << endl;
         m_videoBuffer->printStatus();
 
         m_outFileDebug << simTime() << " [VIDEO_BUFFER] state: " << m_videoBuffer->getBufferStartSeqNum() << " - " << m_videoBuffer->getBufferEndSeqNum() << " , missing: " << m_videoBuffer->getNumberOfCurrentlyMissingChunks() << endl;
@@ -175,7 +167,7 @@ void MTreeBoneBase::handleTimerMessage(cMessage *msg){
 
         updateOwnGossipData(); // update gossip data
 
-        scheduleAt(simTime() + param_BufferMapIntervall, timer_sendBufferMaps); // reschedule
+        scheduleAt(simTime() + MTreeBoneSettings::theSettings->getBufferMapIntervall(), timer_sendBufferMaps); // reschedule
     }
 }
 
@@ -218,7 +210,7 @@ void MTreeBoneBase::processPacket(cPacket *pkt)
         case MTREEBONE_PEER_INFORMATION:
             info = getPeerInformation(src);
             if (info != NULL)
-                for (unsigned int i = 0; i < param_numStripes; i++){
+                for (unsigned int i = 0; i < MTreeBoneSettings::theSettings->getNumberOfStripes(); i++){
                     info->setDistance(i, (check_and_cast<MTreeBonePeerInformationPacket*> (pkt))->getDistance(i) );
                     info->setNumChildren(i, (check_and_cast<MTreeBonePeerInformationPacket*> (pkt))->getNumChildren(i) );
                 }
@@ -287,8 +279,8 @@ MTreeBoneBufferMapPacket* MTreeBoneBase::prepareBufferMap(){
     MTreeBoneBufferMapPacket* ret = new MTreeBoneBufferMapPacket();
 
     // set bone state
-    ret->setBoneNodeForStripeArraySize(param_numStripes);
-    for (unsigned int i = 0; i < param_numStripes; i++)
+    ret->setBoneNodeForStripeArraySize(MTreeBoneSettings::theSettings->getNumberOfStripes());
+    for (unsigned int i = 0; i < MTreeBoneSettings::theSettings->getNumberOfStripes(); i++)
         ret->setBoneNodeForStripe(i, isBoneNodeForStripe(i));
 
     // set buffermap
@@ -305,7 +297,7 @@ MTreeBoneBufferMapPacket* MTreeBoneBase::prepareBufferMap(){
 
 
 void MTreeBoneBase::processNeighborRequest(IPvXAddress src, MTreeBoneNeighborRequestPacket* pkt){
-    if (pkt->getStripeNumber() > param_numStripes) // some one sending mailformed packets ...
+    if (pkt->getStripeNumber() > MTreeBoneSettings::theSettings->getNumberOfStripes()) // some one sending mailformed packets ...
         return;
 
     MTreeBoneNeighborRequestResponsePacket* resp = new MTreeBoneNeighborRequestResponsePacket();
@@ -313,29 +305,29 @@ void MTreeBoneBase::processNeighborRequest(IPvXAddress src, MTreeBoneNeighborReq
     resp->setStripeNumber(stripe);
 
     // stripe full or already contains peer?
-    if ((m_Stripes[stripe].Neighbors.size() >= param_maxNOP) || (m_Stripes[stripe].Neighbors.containsItem(src)))
+    if ((m_Stripes[stripe].Neighbors.size() >= MTreeBoneSettings::theSettings->getNumbersOfPartnersMax()) || (m_Stripes[stripe].Neighbors.containsItem(src)))
         resp->setIsAccepted(m_Stripes[stripe].Neighbors.containsItem(src));
     else{
         addNeighbor(src, stripe);
         resp->setIsAccepted(true);
     }
 
-    m_outFileDebug << simTime().str() << " [NeighborRequest] from "<< src.str() <<" for "<< pkt->getStripeNumber() <<" accepted: "<< resp->getIsAccepted() << ", stripe full? "<< (m_Stripes[stripe].Neighbors.size() >= param_maxNOP) << endl;
+    m_outFileDebug << simTime().str() << " [NeighborRequest] from "<< src.str() <<" for "<< pkt->getStripeNumber() <<" accepted: "<< resp->getIsAccepted() << ", stripe full? "<< (m_Stripes[stripe].Neighbors.size() >= MTreeBoneSettings::theSettings->getNumbersOfPartnersMax()) << endl;
 
     sendToDispatcher(resp, m_localPort, src, m_destPort);
 }
 
 void MTreeBoneBase::processNeighborRequestResponse(IPvXAddress src, MTreeBoneNeighborRequestResponsePacket* pkt){
-    if (pkt->getStripeNumber() > param_numStripes) // some one sending mailformed packets ...
+    if (pkt->getStripeNumber() > MTreeBoneSettings::theSettings->getNumberOfStripes()) // some one sending mailformed packets ...
         return;
 
     int stripe = pkt->getStripeNumber();
 
-    m_outFileDebug << simTime().str() << " [NeighborRequestResponse] from "<< src.str() <<" for "<< pkt->getStripeNumber() <<" accepted: "<< pkt->getIsAccepted() << ", stripe full? "<< (m_Stripes[stripe].Neighbors.size() >= param_maxNOP) << endl;
+    m_outFileDebug << simTime().str() << " [NeighborRequestResponse] from "<< src.str() <<" for "<< pkt->getStripeNumber() <<" accepted: "<< pkt->getIsAccepted() << ", stripe full? "<< (m_Stripes[stripe].Neighbors.size() >= MTreeBoneSettings::theSettings->getNumbersOfPartnersMax()) << endl;
 
     if (pkt->getIsAccepted()){
         // got enough neighbors in the mean time?
-        if (m_Stripes[stripe].Neighbors.size() >= param_maxNOP){
+        if (m_Stripes[stripe].Neighbors.size() >= MTreeBoneSettings::theSettings->getNumbersOfPartnersMax()){
             MTreeBoneNeighborRequestResponsePacket* resp = new MTreeBoneNeighborRequestResponsePacket();
             resp->setStripeNumber(stripe);
             resp->setIsAccepted(false);
@@ -359,7 +351,7 @@ void MTreeBoneBase::addNeighbor(IPvXAddress addr, int stripe){
     m_Stripes[stripe].Neighbors.addItem(addr);
     MTreeBonePeerInformation* info = getPeerInformation(addr);
     if (info == NULL){
-        info = new MTreeBonePeerInformation(param_numStripes, m_videoBuffer->getSize());
+        info = new MTreeBonePeerInformation(MTreeBoneSettings::theSettings->getNumberOfStripes(), m_videoBuffer->getSize());
         m_Neighbors.insert(std::pair<IPvXAddress, MTreeBonePeerInformation*>(addr, info));
     }
 }
@@ -373,7 +365,7 @@ void MTreeBoneBase::removeNeighbor(IPvXAddress addr, int stripe){
     checkFreeUploadListState();
 
     bool remove = true;
-    for (unsigned int i = 0; i < param_numStripes; i++){
+    for (unsigned int i = 0; i < MTreeBoneSettings::theSettings->getNumberOfStripes(); i++){
         if (m_Stripes[i].Neighbors.containsItem(addr)){
             remove = false;
             break;
@@ -404,7 +396,7 @@ void MTreeBoneBase::onNewChunk(IPvXAddress src, int sequenceNumber, int hopcount
     cComponent* origContext = simulation.getContext();
     simulation.setContext(this);
 
-    int stripe = sequenceNumber % param_numStripes;
+    int stripe = sequenceNumber % MTreeBoneSettings::theSettings->getNumberOfStripes();
     std::vector<IPvXAddress>::iterator it;
 
     bool count = false;
@@ -442,32 +434,32 @@ void MTreeBoneBase::checkFreeUploadListState(){
         return;
 
     double children = 0;
-    for (unsigned int stripe = 0; stripe < param_numStripes; stripe++){
+    for (unsigned int stripe = 0; stripe < MTreeBoneSettings::theSettings->getNumberOfStripes(); stripe++){
         children += m_Stripes[stripe].Children.size();
     }
-    children = children / param_numStripes;
+    children = children / MTreeBoneSettings::theSettings->getNumberOfStripes();
 
     m_FreeUploadListEnabled = ((param_MaxUploadFactor - children) >= 1);
 }
 
 void MTreeBoneBase::updateOwnGossipData(){
-    MTreeBoneGossipData* data = new MTreeBoneGossipData(param_numStripes);
+    MTreeBoneGossipData* data = new MTreeBoneGossipData(MTreeBoneSettings::theSettings->getNumberOfStripes());
 
-    for (unsigned int stripe = 0; stripe < param_numStripes; stripe++){
+    for (unsigned int stripe = 0; stripe < MTreeBoneSettings::theSettings->getNumberOfStripes(); stripe++){
         data->setIsBoneNode(stripe, isBoneNodeForStripe(stripe));
         data->setNumChildren(stripe, m_Stripes[stripe].Children.size());
     }
 
     MTreeBonePeerInformationPacket* peerInfo = new MTreeBonePeerInformationPacket();
-    peerInfo->setDistanceArraySize(param_numStripes);
-    peerInfo->setNumChildrenArraySize(param_numStripes);
-    for (unsigned int i = 0; i < param_numStripes; i++){
+    peerInfo->setDistanceArraySize(MTreeBoneSettings::theSettings->getNumberOfStripes());
+    peerInfo->setNumChildrenArraySize(MTreeBoneSettings::theSettings->getNumberOfStripes());
+    for (unsigned int i = 0; i < MTreeBoneSettings::theSettings->getNumberOfStripes(); i++){
         peerInfo->setDistance(i, getMyDistance(i));
         peerInfo->setNumChildren(i, m_Stripes[i].Children.size());
     }
 
     genericList<IPvXAddress> children; genericList<IPvXAddress>::iterator it;
-    for (unsigned int i = 0; i < param_numStripes; i++)
+    for (unsigned int i = 0; i < MTreeBoneSettings::theSettings->getNumberOfStripes(); i++)
         for (it = m_Stripes[i].Children.begin(); it != m_Stripes[i].Children.end(); it++)
             children.addItem(*it);
 
@@ -476,10 +468,10 @@ void MTreeBoneBase::updateOwnGossipData(){
 
     delete peerInfo;
 
-    for (unsigned int i = 0; i < param_numStripes; i++)
+    for (unsigned int i = 0; i < MTreeBoneSettings::theSettings->getNumberOfStripes(); i++)
         m_outFileDebug << simTime().str() << " [DEBUG_GOSSIP] my Distance: stripe " << i << " = " << getMyDistance(i) << endl;
 
-    for (unsigned int i = 0; i < param_numStripes; i++)
+    for (unsigned int i = 0; i < MTreeBoneSettings::theSettings->getNumberOfStripes(); i++)
         data->setDistance(i, getMyDistance(i));
 
     m_Gossiper->setOwnData(data);
@@ -489,7 +481,6 @@ void MTreeBoneBase::updateOwnGossipData(){
 void MTreeBoneBase::handleChunkRequestList(IPvXAddress src, MTreeBoneChunkRequestListPacket* pkt){
     if (m_UploadNextReset < simTime()){ // Bandwidth limit rest?
         m_UploadNextReset = simTime() + 1;
-        m_DebugOutput += (int)m_ChunksLeftForWindow;
 
         m_ChunksLeftForWindow     = m_ChunksPerSecond * param_MaxUploadFactor;// ((param_MaxUploadFactor >= 1) ? param_MaxUploadFactor - 1 : param_MaxUploadFactor); // TODO: subtract children
         m_FreeChunksLeftForWindow = (param_MaxUploadFactor >= 1) ? m_ChunksPerSecond : 0;
@@ -544,7 +535,7 @@ int MTreeBoneBase::getHeadSequenceNumber(int stripe){
     for (it = m_Stripes[stripe].Neighbors.begin(); it != m_Stripes[stripe].Neighbors.end(); it++){
         info = getPeerInformation(*it);
         int stripeChunk = info->getSequenceNumberEnd();
-        stripeChunk = ((stripeChunk % param_numStripes) == stripe)? stripeChunk : stripeChunk + (stripe - stripeChunk % param_numStripes);
+        stripeChunk = ((stripeChunk % MTreeBoneSettings::theSettings->getNumberOfStripes()) == stripe)? stripeChunk : stripeChunk + (stripe - stripeChunk % MTreeBoneSettings::theSettings->getNumberOfStripes());
         ret = max(ret, stripeChunk);
     }
 
@@ -572,7 +563,7 @@ int MTreeBoneBase::getMyDistance(int stripe){
 
     // "push"-distance
     MTreeBonePeerInformation* info;
-    //for (unsigned int i = 0; i < param_numStripes; i++){
+    //for (unsigned int i = 0; i < MTreeBoneSettings::theSettings->getNumberOfStripes(); i++){
     if (!m_Stripes[stripe].Parent.isUnspecified()){
 
         info = getPeerInformation(m_Stripes[stripe].Parent);
@@ -630,9 +621,9 @@ void MTreeBoneBase::handleReplaceChild(IPvXAddress src, MTreeBonePeerReplaceChil
 
     // send distance to new child
     MTreeBonePeerInformationPacket* peerInfo = new MTreeBonePeerInformationPacket();
-    peerInfo->setDistanceArraySize(param_numStripes);
-    peerInfo->setNumChildrenArraySize(param_numStripes);
-    for (unsigned int i = 0; i < param_numStripes; i++){
+    peerInfo->setDistanceArraySize(MTreeBoneSettings::theSettings->getNumberOfStripes());
+    peerInfo->setNumChildrenArraySize(MTreeBoneSettings::theSettings->getNumberOfStripes());
+    for (unsigned int i = 0; i < MTreeBoneSettings::theSettings->getNumberOfStripes(); i++){
         peerInfo->setDistance(i, getMyDistance(i));
         peerInfo->setNumChildren(i, m_Stripes[i].Children.size());
     }

@@ -49,15 +49,6 @@ protected:
     GossipProtocolWithUserData* m_Gossiper;
     void updateOwnGossipData();
 
-    // parameters
-    // @brief maximum number of partners
-    unsigned int param_maxNOP;
-    // @brief desired number of partners
-    unsigned int param_desiredNOP;
-    // @brief number of stripes to use
-    unsigned int param_numStripes;
-    double param_BufferMapIntervall;
-
     // timer
     cMessage* timer_checkPartners;
 

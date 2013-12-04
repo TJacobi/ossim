@@ -40,18 +40,7 @@ simple MTreeBoneBase extends CommBase
         @display("i=block/app;bgb=250,410");
         
         double MaxUploadFactor  = default(2.0);
-        int maxNOP     = default(2);
-    	int desiredNOP = default(4);
-    	double BufferMapIntervall @unit(s) = default(1.0s);
-    	
-		//int substreamCount = default(3); // Number of substreams 
-       
-        //int maxNOP = default(4); // Max number of Partners
-        //int minNOP = default(3); // Min number of Partners
-        
-        //double CheckPartnersIntervall @unit(s) = default(3.0s);
-        //double BufferMapIntervall     @unit(s) = default(1.0s);
-        
+
         bool debugOutput = default(true);
         
 }

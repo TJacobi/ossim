@@ -14,6 +14,7 @@
 // 
 
 #include "MTreeBoneSettings.h"
+#include "AppSettingDonet.h"
 
 MTreeBoneSettings* MTreeBoneSettings::theSettings = NULL;
 
@@ -93,6 +94,14 @@ void MTreeBoneSettings::initialize(int stage){
                 break;
     }
 
+
+    // get some common informations
+    cModule *temp;
+    // Get the app settings
+    temp = simulation.getModuleByPath("appSetting");
+    AppSettingDonet* m_appSetting = dynamic_cast<AppSettingDonet *>(temp);
+    if (m_appSetting == NULL) throw cException("m_appSetting == NULL is invalid");
+    m_ChunksPerSecond = m_appSetting->getVideoStreamChunkRate();
 
 }
 
