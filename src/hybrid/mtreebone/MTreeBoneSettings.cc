@@ -42,6 +42,8 @@ void MTreeBoneSettings::initialize(int stage){
     m_ChunkScheduleIntervall  = par("ChunkScheduleInterval");
     m_ChunkRequestTimeout     = par("ChunkRequestTimeout");
 
+    m_CheckNeighborsIntervall = par("CheckNeighborsIntervall");
+
     m_BufferMapIntervall      = par("BufferMapIntervall");
 
     // partnership

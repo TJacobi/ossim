@@ -33,12 +33,15 @@ public:
     inline double getKResult()                  {return m_KResult;}
     inline double getChunksPerSecond()          {return m_ChunksPerSecond;}
     inline double getBufferMapIntervall()       {return m_BufferMapIntervall;}
+    inline double getChunkRequestTimeout()      {return m_ChunkRequestTimeout;}
+    inline double getChunkScheduleIntervall()   {return m_ChunkScheduleIntervall;}
+    inline double getCheckNeighborsIntervall()  {return m_CheckNeighborsIntervall;}
 
     inline int getNumbersOfPartnersMax()        {return m_MaxNumberOfPartners;}
     inline int getNumbersOfPartnersDesired()    {return m_DesiredNumberOfPartners;}
 protected:
     int m_Stripes;
-    double m_ChunkScheduleIntervall, m_ChunkRequestTimeout;
+    double m_ChunkScheduleIntervall, m_ChunkRequestTimeout, m_CheckNeighborsIntervall;
     int m_MaxNumberOfPartners, m_DesiredNumberOfPartners;
     double m_BufferMapIntervall;
 
