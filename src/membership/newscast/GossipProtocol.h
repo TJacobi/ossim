@@ -56,6 +56,9 @@ public:
     virtual IPvXAddress getRandomPeer(IPvXAddress notThisAddress);
     virtual std::vector<IPvXAddress> getKnownPeers();
 
+    //should return 0 if immediately updated, > 0 updated in future, < 0 request denied
+    virtual int requestUpdate(){return 0;};
+
     // -- Old interface
     virtual void addSourceAddress(const IPvXAddress &address, int maxNOP=0){};
     virtual void addPeerAddress(const IPvXAddress &address, int maxNOP=0){};

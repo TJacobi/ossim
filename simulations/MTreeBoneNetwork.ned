@@ -24,6 +24,7 @@ import so.hybrid.mtreebone.MTreeBoneSourceNode;
 import so.hybrid.mtreebone.MTreeBonePeerNode;
 import so.hybrid.mtreebone.MTreeBoneStats;
 import so.hybrid.mtreebone.MTreeBoneSettings;
+import so.hybrid.mtreebone.attacker.MTreeBoneSimpleAttackerNode;
 
 import so.membership.tracker.GossipingTracker;
 
@@ -31,6 +32,11 @@ network MTreeBone_Homo_oneRouter_Network extends BasicNetwork
 {
     parameters:
         int nNodePerRouter = default(1);
+		int nSimpleAttackers = default(0);
+		
+		double minUploadPeer @unit("kbps") = default(1600kbps);
+		double maxUploadPeer @unit("kbps") = default(4800kbps);
+		
         @display("bgb=488,389");
         string churnModel = default("StaticChurn");
         string statisticModule = default("DonetStatistic");
@@ -47,7 +53,7 @@ network MTreeBone_Homo_oneRouter_Network extends BasicNetwork
         channel Channel_homo_up extends ned.DatarateChannel
         {
             //datarate = uniform(800kbps,1600kbps );//2-4
-            datarate = uniform(1600kbps,4800kbps );//4-12
+            datarate = uniform(minUploadPeer, maxUploadPeer );//4-12
         }
         channel Channel_homo_down extends ned.DatarateChannel
         {
@@ -59,6 +65,8 @@ network MTreeBone_Homo_oneRouter_Network extends BasicNetwork
         }
 
         peerNode[nNodePerRouter]: MTreeBonePeerNode;
+		attackerNode[nSimpleAttackers]: MTreeBoneSimpleAttackerNode;
+		
         router: Router {
             @display("p=329,136");
         }
@@ -111,5 +119,9 @@ network MTreeBone_Homo_oneRouter_Network extends BasicNetwork
         for i=0..nNodePerRouter-1 {
             peerNode[i].pppg$o++ --> Channel_homo_up --> router.pppg$i++;
             peerNode[i].pppg$i++ <-- Channel_homo_down <-- router.pppg$o++;
+        }
+		for i=0..nSimpleAttackers-1 {
+            attackerNode[i].pppg$o++ --> Channel_homo_up --> router.pppg$i++;
+            attackerNode[i].pppg$i++ <-- Channel_homo_down <-- router.pppg$o++;
         }
 }

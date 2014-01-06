@@ -44,6 +44,8 @@ MTreeBonePeerInformation::MTreeBonePeerInformation(int stripes, int buffersize) 
     lastData = NULL;
     desertedPeer = simTime();
     missingChunks = 1000;
+
+    mFirstSeenTime = 0;
 }
 
 MTreeBonePeerInformation::~MTreeBonePeerInformation() {

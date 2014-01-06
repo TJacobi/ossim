@@ -34,6 +34,8 @@ public:
     SimpleGossipingTrackerAdapter* getPeerByAddress(SimpleGossipingTrackerAdapter* requester, IPvXAddress addr);
     genericList<SimpleGossipingTrackerAdapter*> getKnownPeersForPeer(SimpleGossipingTrackerAdapter* requester);
 
+    void shufflePeersKnownPeers(SimpleGossipingTrackerAdapter* target);
+
     int inline getParameter_NumKnownPeers(){return param_numKnownPeers;};
 
 

@@ -55,17 +55,29 @@ enum MTreeBonePacketType
 	MTREEBONE_SWITCH_POSITION_REQUEST_RESPONSE = 10;
 	MTREEBONE_REPLACE_CHILD = 11;
 	MTREEBONE_INFORM_NEW_PARENT = 12;
-	MTREEBONE_PACKETS_MAX = 12;
+	MTREEBONE_PROMOTION = 13;
+	MTREEBONE_PACKETS_MAX = 13;
 }
 
 packet MTreeBonePacket extends PeerStreamingPacket
 {
-    packetGroup = PACKET_GROUP_MESH_OVERLAY;
-    
-    short packetType     @getter(getPacketType) @setter(setPacketType) @enum(MTreeBonePacketType) ;     
+
+	short packetType     @getter(getPacketType) @setter(setPacketType) @enum(MTreeBonePacketType) ;
+	
 }
 
-packet MTreeBoneBufferMapPacket extends MTreeBonePacket
+
+packet MTreeBonePacketMesh extends MTreeBonePacket
+{
+    packetGroup = PACKET_GROUP_MESH_OVERLAY;  
+}
+
+packet MTreeBonePacketTree extends MTreeBonePacket
+{
+    packetGroup = PACKET_GROUP_TREE_OVERLAY; 
+}
+
+packet MTreeBoneBufferMapPacket extends MTreeBonePacketMesh
 {
 	packetType = MTREEBONE_BUFFER_MAP;
 	
@@ -77,36 +89,22 @@ packet MTreeBoneBufferMapPacket extends MTreeBonePacket
 	bool tempYouAreMyParent;
 }
 
-//packet MTreeBoneChunkRequestPacket extends MTreeBonePacket
-//{
-//	packetType = MTREEBONE_CHUNK_REQUEST;
-//	
-//	unsigned int sequenceNumber;
-//}
-
-packet MTreeBoneChunkRequestListPacket extends MTreeBonePacket
+packet MTreeBoneChunkRequestListPacket extends MTreeBonePacketMesh
 {
 	packetType = MTREEBONE_CHUNK_REQUEST_LIST;
 	
 	unsigned int sequenceNumbers[];
 }
 
-//packet MTreeBoneChunkDenyPacket extends MTreeBonePacket
-//{
-//	packetType = MTREEBONE_CHUNK_DENY;
-//	
-//	unsigned int sequenceNumber;
-//	unsigned int requestThis;
-//}
-
-packet MTreeBoneNeighborRequestPacket extends MTreeBonePacket
+packet MTreeBoneNeighborRequestPacket extends MTreeBonePacketMesh
 {
 	packetType = MTREEBONE_NEIGHBOR_REQUEST;
 	
 	unsigned int stripeNumber;
+	double		joinTime;
 }
 
-packet MTreeBoneNeighborRequestResponsePacket extends MTreeBonePacket
+packet MTreeBoneNeighborRequestResponsePacket extends MTreeBonePacketMesh
 {
 	packetType = MTREEBONE_NEIGHBOR_REQUEST_RESPONSE;
 	
@@ -114,7 +112,7 @@ packet MTreeBoneNeighborRequestResponsePacket extends MTreeBonePacket
 	bool isAccepted;
 }
 
-packet MTreeBoneParentRequestPacket extends MTreeBonePacket
+packet MTreeBoneParentRequestPacket extends MTreeBonePacketTree
 {
 	packetType = MTREEBONE_PARENT_REQUEST;
 	
@@ -124,7 +122,7 @@ packet MTreeBoneParentRequestPacket extends MTreeBonePacket
 	unsigned int ownHead;
 }
 
-packet MTreeBoneParentRequestResponsePacket extends MTreeBonePacket
+packet MTreeBoneParentRequestResponsePacket extends MTreeBonePacketTree
 {
 	packetType = MTREEBONE_PARENT_REQUEST_RESPONSE;
 	
@@ -132,7 +130,7 @@ packet MTreeBoneParentRequestResponsePacket extends MTreeBonePacket
 	bool isAccepted;
 }
 
-packet MTreeBonePeerInformationPacket extends MTreeBonePacket
+packet MTreeBonePeerInformationPacket extends MTreeBonePacketTree
 {
 	packetType = MTREEBONE_PEER_INFORMATION;
 	
@@ -140,7 +138,7 @@ packet MTreeBonePeerInformationPacket extends MTreeBonePacket
 	int numChildren[];
 }
 
-packet MTreeBonePeerSwitchPostionRequestPacket extends MTreeBonePacket
+packet MTreeBonePeerSwitchPostionRequestPacket extends MTreeBonePacketTree
 {
 	packetType = MTREEBONE_SWITCH_POSITION_REQUEST;
 	
@@ -148,7 +146,7 @@ packet MTreeBonePeerSwitchPostionRequestPacket extends MTreeBonePacket
 	IPvXAddress suggestedNewParent;
 }
 
-packet MTreeBonePeerSwitchPostionRequestResponsePacket extends MTreeBonePacket
+packet MTreeBonePeerSwitchPostionRequestResponsePacket extends MTreeBonePacketTree
 {
 	packetType = MTREEBONE_SWITCH_POSITION_REQUEST_RESPONSE;
 	
@@ -156,7 +154,7 @@ packet MTreeBonePeerSwitchPostionRequestResponsePacket extends MTreeBonePacket
 	IPvXAddress newParent;
 }
 
-packet MTreeBonePeerReplaceChildPacket extends MTreeBonePacket
+packet MTreeBonePeerReplaceChildPacket extends MTreeBonePacketTree
 {
 	packetType = MTREEBONE_REPLACE_CHILD;
 	
@@ -164,10 +162,16 @@ packet MTreeBonePeerReplaceChildPacket extends MTreeBonePacket
 	IPvXAddress newChild;
 }
 
-packet MTreeBonePeerInformNewParentPacket extends MTreeBonePacket
+packet MTreeBonePeerInformNewParentPacket extends MTreeBonePacketTree
 {
 	packetType = MTREEBONE_INFORM_NEW_PARENT;
 	
 	int stripe;
 	IPvXAddress newParent;
 }
+
+packet MTreeBonePromotionPacket extends MTreeBonePacketTree
+{
+	packetType = MTREEBONE_PROMOTION;
+}
+

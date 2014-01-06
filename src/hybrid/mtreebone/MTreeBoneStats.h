@@ -6,7 +6,9 @@
 
 #include "MTreeBoneSource.h"
 #include "MTreeBonePeer.h"
+
 #include "AppSettingDonet.h"
+#include <fstream>
 
 class MTreeBoneStats : public cSimpleModule {
 public:
@@ -36,6 +38,11 @@ public:
 
     void onPlayerSkipped(MTreeBonePeer* peer, SEQUENCE_NUMBER_T oldposition, SEQUENCE_NUMBER_T newposition);
 
+    // attacker
+    void attackerJoinedNetwork(MTreeBoneBase* attacker);
+    void attackerLeavedNetwork(MTreeBoneBase* attacker);
+
+
     static MTreeBoneStats* theStats; // global pointer for easier acces
 
     virtual int numInitStages() const { return 4; }
@@ -49,7 +56,7 @@ protected:
         cChunkStats (simtime_t gen, int peers){
             generated = gen;
             received = receivedB = 0;
-            minDelay = maxDelay = minDelayB = maxDelayB -1;
+            minDelay = maxDelay = minDelayB = maxDelayB = -1;
             totalDelay = totalDelayB = 0;
             peersAtGenerations = peers;
 
@@ -76,8 +83,19 @@ protected:
 
     };
 
+    class cPlayerStats{
+    public:
+        cPlayerStats (long hits, long miss){
+            mHits = hits;
+            mMiss = miss;
+        }
+
+        long mHits, mMiss;
+    };
+
     MTreeBoneSource* m_Src;
     genericList<MTreeBonePeer*> m_Peers;
+    genericList<MTreeBoneBase*> m_Attackers;
     int m_Stripes;
 
     std::ofstream m_PeerOutput;
@@ -90,14 +108,20 @@ protected:
     std::list<double> m_List_MissRatio;
 
     std::ofstream m_PeerReceiveRate;
+    std::ofstream m_ContinuityAvg;
+    std::ofstream m_AttackedChildrenFile;
 
     cMessage* m_Timer_Report;
     cMessage* m_Timer_Report_Stats;
+    cMessage* m_Timer_Continuity;
+    cMessage* m_Timer_Attacked_Children;
 
     std::map<MTreeBonePeer*, simtime_t> mPeerjoinTime;
     std::map<SEQUENCE_NUMBER_T, cChunkStats*> mChunkStats;
+    std::map<MTreeBonePeer*, cPlayerStats*> mContinuityIndexData;
 
     void doReportForStripe(int stripe);
+    void doPrintContinuityIndex();
 
     double mStats_StartUpDelay_Min, mStats_StartUpDelay_Max, mStats_StartUpDelay_Total;
     int mStats_StartUpDelay_Count;
@@ -108,6 +132,7 @@ protected:
     int mStats_Peers_Joined, mStats_Peers_Leaved, mStats_Peers_Current, mStats_Peers_MaxConcurrent;
     int mStats_Peers_Joined_t, mStats_Peers_Leaved_t, mStats_Peers_Current_t, mStats_Peers_MaxConcurrent_t;
 
+    int mStats_Attackers_TotalJoined;
     cChunkStats* mStats_Last;
 
     // Playback delay
@@ -132,6 +157,14 @@ protected:
 
     bool param_PeriodOutput;
     double param_PeriodOutputIntervall;
+    double param_PeriodContinuityIntervall;
+    double param_AttackedChildrenIntervall;
+
+
+
+    MTreeBoneBase* getPeer(IPvXAddress addr, bool searchAttackers = false);
+    long getChildrenCount(MTreeBoneBase* peer, bool recursive, bool ignoreAttackers);
+
 private:
     std::string mRootDirectory;
 };

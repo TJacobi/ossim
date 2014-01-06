@@ -1,4 +1,4 @@
-package so.hybrid.mtreebone;
+package so.hybrid.mtreebone.promotion;
 
 import so.common.Dispatcher;
 import so.membership.MCache;
@@ -6,7 +6,8 @@ import so.membership.MCache;
 import so.hybrid.mtreebone.MTreeBonePeer;
 
 import so.hybrid.mtreebone.MTreeBoneMesh;
-import so.hybrid.mtreebone.MTreeBoneTree;
+//import so.hybrid.mtreebone.MTreeBoneTree;
+
 
 import so.mesh.PartnerList;
 import so.payload.Forwarder;
@@ -14,13 +15,14 @@ import so.payload.VideoBuffer;
 import so.payload.PlayerStallSkip;
 import so.payload.PlayerBufferSkip;
 //import simpleoverlay.global.AppSettingDonet;
+import so.hybrid.mtreebone.promotion.MTreeBoneTreeSimplePromotion;
 
 import so.membership.newscast.NewscastPeer;
 import so.membership.tracker.SimpleGossipingTrackerAdapter;
 
 import so.membership.dummy.DummyMembership;
 
-module MTreeBonePeerApp
+module MTreeBoneSimplePromotionPeerApp
 {
     parameters:
         @display("bgb=270,294");
@@ -55,7 +57,7 @@ module MTreeBonePeerApp
         gossipProtocol : SimpleGossipingTrackerAdapter;
         
         meshmodule : MTreeBoneMesh;
-        treemodule : MTreeBoneTree;
+        treemodule : MTreeBoneTreeSimplePromotion;
         
         dispatcher: Dispatcher {
             @display("p=132,247;i=block/dispatch");

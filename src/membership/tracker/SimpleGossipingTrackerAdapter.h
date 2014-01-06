@@ -31,6 +31,7 @@ public:
     virtual void leaveNetwork();
     virtual IPvXAddress getRandomPeer(IPvXAddress notThisAddress);
     virtual std::vector<IPvXAddress> getKnownPeers();
+    virtual int requestUpdate();
     // GossipProtocolWithUserData
     virtual void setOwnData(GossipUserData* data);
     virtual GossipUserData* getPeerData(IPvXAddress addr);

@@ -37,12 +37,12 @@ public:
     inline double getChunkScheduleIntervall()   {return m_ChunkScheduleIntervall;}
     inline double getCheckNeighborsIntervall()  {return m_CheckNeighborsIntervall;}
 
-    inline int getNumbersOfPartnersMax()        {return m_MaxNumberOfPartners;}
-    inline int getNumbersOfPartnersDesired()    {return m_DesiredNumberOfPartners;}
+    inline unsigned int getNumbersOfPartnersMax()        {return m_MaxNumberOfPartners;}
+    inline unsigned int getNumbersOfPartnersDesired()    {return m_DesiredNumberOfPartners;}
 protected:
     int m_Stripes;
     double m_ChunkScheduleIntervall, m_ChunkRequestTimeout, m_CheckNeighborsIntervall;
-    int m_MaxNumberOfPartners, m_DesiredNumberOfPartners;
+    unsigned int m_MaxNumberOfPartners, m_DesiredNumberOfPartners;
     double m_BufferMapIntervall;
 
     double m_KResult;

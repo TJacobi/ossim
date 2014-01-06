@@ -94,12 +94,26 @@ void GossipingTracker::shufflePeers(){
     }
 }
 
+void GossipingTracker::shufflePeersKnownPeers(SimpleGossipingTrackerAdapter* gossiper){
+    std::map< SimpleGossipingTrackerAdapter*, genericList<SimpleGossipingTrackerAdapter*> >::iterator it = mPeers.find( gossiper );
+    if (it == mPeers.end()) return ;
+
+    (*it).second.clear();
+    for (int i = 0; i < param_numKnownPeers; i++){
+        SimpleGossipingTrackerAdapter* rnd = getRandomPeer( (*it).first );
+
+        if (rnd != NULL)
+            (*it).second.addItem(rnd);
+    }
+}
 void GossipingTracker::joinNetwork(SimpleGossipingTrackerAdapter* gossiper){
     std::map< SimpleGossipingTrackerAdapter*, genericList<SimpleGossipingTrackerAdapter*> >::iterator it = mPeers.find( gossiper );
     if (it != mPeers.end()) return ;
 
     genericList<SimpleGossipingTrackerAdapter*> list;
     mPeers.insert(std::pair< SimpleGossipingTrackerAdapter*, genericList<SimpleGossipingTrackerAdapter*> > (gossiper, list));
+
+    shufflePeersKnownPeers(gossiper);
     //mPeers.addItem(gossiper);
 }
 void GossipingTracker::leaveNetwork(SimpleGossipingTrackerAdapter* gossiper){

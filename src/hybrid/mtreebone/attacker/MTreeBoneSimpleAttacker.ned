@@ -20,7 +20,7 @@
 // this program. If not, see <http://www.gnu.org/licenses/>.
 
 // -----------------------------------------------------------------------------
-// MTreeBoneBase.ned
+// MTreeBoneSimpleAttacker.ned
 // -----------------------------------------------------------------------------
 // (C) Copyright 2012-2013, by Giang Nguyen (P2P, TU Darmstadt) and Contributors
 //
@@ -29,22 +29,24 @@
 //
 
 
-package so.hybrid.mtreebone;
+package so.hybrid.mtreebone.attacker;
 
-import so.common.CommBase;
+import so.hybrid.mtreebone.MTreeBoneBase;
 
-simple MTreeBoneBase extends CommBase
-//simple MTreeBoneBase 
+simple MTreeBoneSimpleAttacker extends MTreeBoneBase
 {
     parameters:
-        @class(MTreeBoneBase);
+        @class(MTreeBoneSimpleAttacker);
         @display("i=block/app;bgb=250,410");
-        
-        double MaxUploadFactor  = default(25.0);
 
-        bool debugOutput = default(true);
+        //bool debugOutput = default(true);
+        bool denyPull = default(false);
+        bool denyPush = default(true);
         
-        double joinTime @unit("s") = default(0.0s); 
-        //default(uniform(0.0s,0.0s));
-        double stayDuration @unit("s") = default(-1.0s);
+        bool fastUpdateGossiping = default(false);
+
+        int numFakeChildren = default(0);
+        int maxAttackDistance = default(0);
+        
+        double startAttackTime @unit(s) = default(0.0s);
 }

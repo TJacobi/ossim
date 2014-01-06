@@ -1,9 +1,9 @@
-package so.hybrid.mtreebone;
+package so.hybrid.mtreebone.attacker;
 
 import so.common.Dispatcher;
 import so.membership.MCache;
 
-import so.hybrid.mtreebone.MTreeBonePeer;
+import so.hybrid.mtreebone.attacker.MTreeBoneSimpleAttacker;
 
 import so.hybrid.mtreebone.MTreeBoneMesh;
 import so.hybrid.mtreebone.MTreeBoneTree;
@@ -20,7 +20,7 @@ import so.membership.tracker.SimpleGossipingTrackerAdapter;
 
 import so.membership.dummy.DummyMembership;
 
-module MTreeBonePeerApp
+module MTreeBoneSimpleAttackerApp
 {
     parameters:
         @display("bgb=270,294");
@@ -31,7 +31,7 @@ module MTreeBonePeerApp
         output udpOut;
 
     submodules:
-        peer: MTreeBonePeer {
+        attacker: MTreeBoneSimpleAttacker {
             @display("p=132,173;i=block/network2");
         }
         forwarder: Forwarder {
@@ -81,8 +81,8 @@ module MTreeBonePeerApp
         dispatcher.overlayOut++ --> treemodule.dpIn;
         
         // Add our peer module to Dispatcher
-        dispatcher.overlayIn++ <-- peer.dpOut;
-        dispatcher.overlayOut++ --> peer.dpIn;
+        dispatcher.overlayIn++ <-- attacker.dpOut;
+        dispatcher.overlayOut++ --> attacker.dpIn;
 
         // Connect Dispatcher to module's ports
         dispatcher.udpIn <-- udpIn;

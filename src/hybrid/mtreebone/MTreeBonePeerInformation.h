@@ -17,6 +17,7 @@
 #define MTREEBONEPEERINFORMATION_H_
 
 #include "MTreeBonePacket_m.h"
+#include "MTreeBonePacket_m.h"
 #include "MTreeBoneGossipData.h"
 #include "AppCommon.h"
 
@@ -64,6 +65,16 @@ public:
     void setNumChildren(int stripe, int value){numChildren[stripe] = value;}
 
     void setSequenceNumberEnd(SEQUENCE_NUMBER_T newHead){sequenceNumberEnd = newHead;}
+
+    simtime_t getJoinTime(){return mJoinTime;}
+    void setJoinTime(simtime_t time){mJoinTime = time;}
+
+    simtime_t getFirstSeenTime(){return mFirstSeenTime;}
+    void setFirstSeenTime(simtime_t time){mFirstSeenTime = time;}
+    void setFirstSeenTime(){
+        if (mFirstSeenTime <= 0)
+            mFirstSeenTime = simTime();
+    }
 private:
     unsigned int sequenceNumberStart;
     unsigned int sequenceNumberEnd;
@@ -78,6 +89,9 @@ private:
     int* distance;
     int* numChildren;
     int missingChunks;
+
+    simtime_t mJoinTime;
+    simtime_t mFirstSeenTime;
 };
 
 #endif /* MTREEBONEPEERINFORMATION_H_ */

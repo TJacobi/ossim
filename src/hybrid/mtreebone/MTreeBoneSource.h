@@ -17,26 +17,26 @@
 #define MTREEBONESOURCE_H_
 
 #include "MTreeBoneBase.h"
+#include "VideoBufferListener.h"
 
-class MTreeBoneSource: public MTreeBoneBase {
+class MTreeBoneBase;
+
+class MTreeBoneSource : public MTreeBoneBase, public VideoBufferListener {
 public:
     MTreeBoneSource();
     virtual ~MTreeBoneSource();
 
-    virtual void onNewChunk(IPvXAddress src, int sequenceNumber, int hopcount);
-protected:
-    cMessage* timer_joinNetwork;
+    virtual bool isBoneNodeForStripe(int stripe){return true;};
+    virtual int getMyDistance(int stripe){return 0;};
 
+    virtual bool isSource(){return true;}  // overwrite on source
+
+    // VideoBufferListener
+    virtual void onNewChunk(IPvXAddress src, int sequenceNumber, int hopcount);
+    virtual void onDuplicateChunk(IPvXAddress src, int sequenceNumber, int hopcount){};
+protected:
     virtual int numInitStages() const { return 4; }
     virtual void initialize(int stage);
-    virtual void handleTimerMessage(cMessage *msg);
-
-    // override base function to always return true (because this is the source);
-    virtual bool isBoneNodeForStripe(int stripe);
-
-    virtual int getMyDistance(int stripe);
-private:
-
 };
 
 #endif /* MTREEBONESOURCE_H_ */

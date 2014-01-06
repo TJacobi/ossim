@@ -1,6 +1,7 @@
 #include "MTreeBoneStats.h"
 #include "MTreeBonePacket_m.h"
 #include "MTreeBoneSettings.h"
+#include "MTreeBoneSimpleAttacker.h"
 
 MTreeBoneStats* MTreeBoneStats::theStats = NULL;
 
@@ -10,18 +11,32 @@ MTreeBoneStats::MTreeBoneStats() {
     // TODO Auto-generated constructor stub
     m_Src = NULL;
 
-    m_Timer_Report = NULL;
-    m_Timer_Report_Stats = NULL;
+    mStats_Attackers_TotalJoined = 0;
+
+    m_Timer_Report              = NULL;
+    m_Timer_Report_Stats        = NULL;
+    m_Timer_Continuity          = NULL;
+    m_Timer_Attacked_Children   = NULL;
 
     mStats_Packets = new long[MTREEBONE_PACKETS_MAX+1];
     for (int i = 0; i < MTREEBONE_PACKETS_MAX+1; i++)
         mStats_Packets[i] = 0;
 
+    std::stringstream pTemp;
+    pTemp << "runs/" << ev.getConfigEx()->getActiveRunNumber();// << "/stats";
+    mRootDirectory = pTemp.str() ;
+    // create directory
+    pTemp.str("");
+    pTemp << "mkdir -p \"" << mRootDirectory << "\"";   // TODO: fix so it wont generate a "-p" folder on windows xD
+    system(pTemp.str().c_str());
 }
 
 MTreeBoneStats::~MTreeBoneStats() {
     if (m_Timer_Report != NULL) cancelAndDelete(m_Timer_Report); m_Timer_Report = NULL;
     if (m_Timer_Report_Stats != NULL) cancelAndDelete(m_Timer_Report_Stats); m_Timer_Report_Stats = NULL;
+    if (m_Timer_Continuity != NULL) cancelAndDelete(m_Timer_Continuity); m_Timer_Continuity = NULL;
+    if (m_Timer_Attacked_Children != NULL) cancelAndDelete(m_Timer_Attacked_Children); m_Timer_Attacked_Children = NULL;
+
 
     delete[] mStats_Packets;
     //m_PeerOutput.close();
@@ -57,13 +72,7 @@ void MTreeBoneStats::initialize(int stage){
     if (m_appSetting == NULL) throw cException("m_appSetting == NULL is invalid");
     m_Stripes = m_appSetting->getNumberOfStripes();
 
-    std::stringstream pTemp;
-    pTemp << "runs/" << ev.getConfigEx()->getActiveRunNumber() << "/stats";
-    mRootDirectory = pTemp.str() ;
-    // create directory
-    pTemp.str("");
-    pTemp << "mkdir \"" << mRootDirectory << "\"";
-    system(pTemp.str().c_str());
+
 
     std::stringstream filename;
     filename << mRootDirectory << "/peeractivity.txt";
@@ -86,8 +95,20 @@ void MTreeBoneStats::initialize(int stage){
     m_PeerReceiveRate.open(filename.str().c_str());
 
 
-    m_Timer_Report       = new cMessage("MTREEBONESTATS_TIMER_REPORT");
-    m_Timer_Report_Stats = new cMessage("MTREEBONESTATS_TIMER_REPORT_STATS");
+    filename.str("");
+    filename << mRootDirectory << "/continuity.avg_ot.txt";
+    m_ContinuityAvg.open(filename.str().c_str());
+
+    filename.str("");
+    filename << mRootDirectory << "/attackedchildren.txt";
+    m_AttackedChildrenFile.open(filename.str().c_str());
+
+
+
+    m_Timer_Report              = new cMessage("MTREEBONESTATS_TIMER_REPORT");
+    m_Timer_Report_Stats        = new cMessage("MTREEBONESTATS_TIMER_REPORT_STATS");
+    m_Timer_Continuity          = new cMessage("MTREEBONESTATS_TIMER_CONTINUITY_INDEX");
+    m_Timer_Attacked_Children   = new cMessage("MTREEBONESTATS_TIMER_ATTACKED_CHILDREN");
 
     // initialize stats
     mStats_Peers_Joined = mStats_Peers_Leaved = mStats_Peers_Current = mStats_Peers_MaxConcurrent = 0;
@@ -113,8 +134,17 @@ void MTreeBoneStats::initialize(int stage){
     param_PeriodOutput = par("enablePeriodicalStructureOutput").boolValue();
     param_PeriodOutputIntervall = par("PeriodicalStructureOutputIntervall").doubleValue();
 
+    param_PeriodContinuityIntervall = par("PeriodicalContinuityIndexIntervall").doubleValue();
+    param_AttackedChildrenIntervall = par("PeriodicalAttackedChildrenIntervall").doubleValue();
+    //double PeriodicalContinuityIndexIntervall @unit(s) = default(30.0s);'
+
     scheduleAt(simTime() + param_PeriodOutputIntervall, m_Timer_Report);
     scheduleAt(simTime() + 60, m_Timer_Report_Stats);
+    if (param_PeriodContinuityIntervall > 0)
+        scheduleAt(param_PeriodContinuityIntervall, m_Timer_Continuity);
+    if (param_AttackedChildrenIntervall > 0)
+        scheduleAt(param_AttackedChildrenIntervall, m_Timer_Attacked_Children);
+
 }
 
 
@@ -145,6 +175,8 @@ void MTreeBoneStats::finish(){
     cleanOldData(-1);
     printStats();
 
+    m_PeerOutput << "[ATTACKER][JOIN][TOTAL] " << mStats_Attackers_TotalJoined << endl;
+
     genericList<MTreeBonePeer*>::iterator it = m_Peers.begin();
     while (it != m_Peers.end()){
         m_ChunkMissHits << (*it)->getAddress().str() << "\t" << (*it)->getPlayer()->getChunksMissed() << "\t" << (*it)->getPlayer()->getChunksHit() << endl;
@@ -168,6 +200,8 @@ void MTreeBoneStats::finish(){
 
 }
 
+#include "MyDebugClass.h"
+
 void MTreeBoneStats::handleMessage(cMessage *msg){
     if (!msg->isSelfMessage())
         return;
@@ -190,7 +224,67 @@ void MTreeBoneStats::handleMessage(cMessage *msg){
         printStats();
 
         scheduleAt(simTime() + 60, m_Timer_Report_Stats);
+    }else if(msg == m_Timer_Continuity){
+
+        doPrintContinuityIndex();
+
+        if (param_PeriodContinuityIntervall > 0)
+            scheduleAt(simTime() + param_PeriodContinuityIntervall, m_Timer_Continuity);
+    }else if(msg == m_Timer_Attacked_Children){
+           //debugOut("m_Timer_Attacked_Children->");
+        //genericList<MTreeBoneBase*> m_Attackers;
+        genericList<MTreeBoneBase*>::iterator itA;
+        long affectedChildren = 0;
+
+        for (itA = m_Attackers.begin(); itA != m_Attackers.end(); itA++){
+            if ( ((MTreeBoneSimpleAttacker*) *itA)->isAttacking() ){
+                //debugOut( (*itA)->getAddress().str() );
+                affectedChildren += getChildrenCount( *itA , true, true);
+            }
+        }
+
+        m_AttackedChildrenFile << simTime() << "\t" << affectedChildren << endl;
+
+        scheduleAt(simTime() + param_AttackedChildrenIntervall, m_Timer_Attacked_Children);
+        //debugOut("<- m_Timer_Attacked_Children");
     }
+}
+
+long MTreeBoneStats::getChildrenCount(MTreeBoneBase* peer, bool recursive, bool ignoreAttackers){
+    if (peer == NULL) return 0;
+    long ret = 0;// = peer->getStripe(0)->Children.size();
+
+    if (recursive){
+        genericList<IPvXAddress>::iterator it;
+        //debugOut( "recursive:" );
+        for (it = peer->getStripe(0)->Children.begin(); it != peer->getStripe(0)->Children.end(); it++){
+            //debugOut( (*it).str() );
+            MTreeBoneBase* peer = getPeer( *it, !ignoreAttackers);
+            if (peer != NULL){
+                ret++;
+                ret += getChildrenCount(peer , recursive, ignoreAttackers );
+            }
+            //debugOut( "current done" );
+        }
+    }
+
+    return ret;
+}
+
+MTreeBoneBase* MTreeBoneStats::getPeer(IPvXAddress addr, bool searchAttackers){
+    genericList<MTreeBonePeer*>::iterator it;
+    for (it = m_Peers.begin(); it != m_Peers.end(); it++)
+        if ( (*it)->getAddress().equals(addr) )
+            return (MTreeBoneBase*) (*it);
+
+    if (searchAttackers){
+        genericList<MTreeBoneBase*>::iterator itA;
+        for (itA = m_Attackers.begin(); itA != m_Attackers.end(); itA++)
+            if ( (*itA)->getAddress().equals(addr) )
+                return (*itA);
+    }
+
+    return NULL;
 }
 
 void MTreeBoneStats::doReportForStripe(int stripe){
@@ -209,8 +303,14 @@ void MTreeBoneStats::doReportForStripe(int stripe){
 
         genericList<MTreeBonePeer*>::iterator it;
         for (it = m_Peers.begin(); it != m_Peers.end(); it++)
-            if (! (*it)->getParent(stripe).isUnspecified())
-                m_Writer << (*it)->getAddress() << " " << (*it)->getParent(stripe).str() << " " << endl;
+            if (! (*it)->getStripe(stripe)->Parent.isUnspecified())
+                m_Writer << (*it)->getAddress() << " " << (*it)->getStripe(stripe)->Parent.str() << " " << endl;
+
+    // also print attackers for structure
+        genericList<MTreeBoneBase*>::iterator ita;
+        for (ita = m_Attackers.begin(); ita != m_Attackers.end(); ita++)
+            if (! (*ita)->getStripe(stripe)->Parent.isUnspecified())
+                m_Writer << (*ita)->getAddress() << " " << (*ita)->getStripe(stripe)->Parent.str() << " " << endl;
 
         m_Writer.flush(); m_Writer.close();
 }
@@ -613,7 +713,7 @@ void MTreeBoneStats::registerPacketSend(MTreeBonePacketType type){
 }
 
 void MTreeBoneStats::onPlayerSkipped(MTreeBonePeer* peer, SEQUENCE_NUMBER_T oldposition, SEQUENCE_NUMBER_T newposition){
-    m_PeerOutput << simTime() << " [DEBUG][PLAYER] skipped from " << oldposition << " to " << newposition << " @ " << peer->getAddress().str() << " bonenode: " << !peer->getParent(0).isUnspecified() << endl;
+    m_PeerOutput << simTime() << " [DEBUG][PLAYER] skipped from " << oldposition << " to " << newposition << " @ " << peer->getAddress().str() << " bonenode for 0: " << !peer->isBoneNodeForStripe(0) << endl;
 }
 
 void MTreeBoneStats::chunkDuplicateReceived(MTreeBonePeer* peer, IPvXAddress sender, SEQUENCE_NUMBER_T chunknumber, bool viaPush){
@@ -625,4 +725,49 @@ void MTreeBoneStats::chunkDuplicateReceived(MTreeBonePeer* peer, IPvXAddress sen
         stats->duplicatesPush++;
     else
         stats->duplicatesPull++;
+}
+
+void MTreeBoneStats::attackerJoinedNetwork(MTreeBoneBase* attacker){
+    m_PeerOutput << simTime() << " [ATTACKER] joined Network: " << attacker->getAddress().str() << endl;
+    m_Attackers.addItem(attacker);
+    mStats_Attackers_TotalJoined++;
+}
+
+void MTreeBoneStats::attackerLeavedNetwork(MTreeBoneBase* attacker){
+    m_PeerOutput << simTime() << " [ATTACKER] leaved Network: " << attacker->getAddress().str() << endl;
+    m_Attackers.removeItem(attacker);
+}
+
+void MTreeBoneStats::doPrintContinuityIndex(){
+    std::stringstream filename;
+    filename << mRootDirectory << "/continuity." << simTime() << ".txt";
+
+    std::ofstream writestream;
+    writestream.open(filename.str().c_str());
+
+    genericList<MTreeBonePeer*>::iterator it;
+    double avg = 0; double count = 0;
+
+    //mContinuityIndexData
+    //mChunkStats.insert(std::pair<SEQUENCE_NUMBER_T, cChunkStats*>(chunknumber, new cChunkStats( simTime(), mStats_Peers_Current )) );
+    cPlayerStats* pStats;
+    for ( it = m_Peers.begin(); it != m_Peers.end(); it++){
+        if (mContinuityIndexData.find( *it ) == mContinuityIndexData.end())
+            mContinuityIndexData.insert(std::pair<MTreeBonePeer*, cPlayerStats*>( *it, new cPlayerStats(0,0) ) );
+        pStats = mContinuityIndexData.find( *it )->second;
+
+        double result = (*it)->getPlayer()->getChunksHit() + (*it)->getPlayer()->getChunksMissed() - pStats->mHits - pStats->mMiss;
+        if (result > 0){
+            result = (double)((*it)->getPlayer()->getChunksHit() - pStats->mHits) / result;
+            avg += result; count++;
+            writestream << (*it)->getAddress().str() << "\t" << result << endl;
+        }
+        pStats->mHits = (*it)->getPlayer()->getChunksHit();
+        pStats->mMiss = (*it)->getPlayer()->getChunksMissed();
+    }
+
+    avg = avg / count;
+    m_ContinuityAvg << simTime() << "\t" << avg << endl;
+
+    writestream.close();
 }

@@ -13,30 +13,28 @@
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 // 
 
-#include "MTreeBoneSource.h"
-#include "MTreeBoneStats.h"
+#ifndef MTREEBONETREESIMPLEPROMOTION_H_
+#define MTREEBONETREESIMPLEPROMOTION_H_
 
-Define_Module(MTreeBoneSource);
+#include "MTreeBoneTree.h"
 
-MTreeBoneSource::MTreeBoneSource() {
-    // TODO Auto-generated constructor stub
+class MTreeBoneTreeSimplePromotion : public MTreeBoneTree {
+public:
+    MTreeBoneTreeSimplePromotion();
+    virtual ~MTreeBoneTreeSimplePromotion();
 
-}
+    virtual void timerCheckNeighbors();
 
-MTreeBoneSource::~MTreeBoneSource() {
-    // TODO Auto-generated destructor stub
-}
+    virtual void processPacket(MTreeBonePacketTree* pkt, IPvXAddress src);// cPacket *pkt);
 
-void MTreeBoneSource::initialize(int stage){
-    if (stage != 3)
-        return;
-    initBase();
 
-    m_videoBuffer->addListener(this);
+    virtual void initialize(int stage);
+private:
+    bool isPromoted;
 
-    MTreeBoneStats::theStats->setSource(this);
-}
+    bool isEligibleForPromotion(MTreeBonePeerInformation* info);
 
-void MTreeBoneSource::onNewChunk(IPvXAddress src, int sequenceNumber, int hopcount){
-    MTreeBoneStats::theStats->chunkGenerated(sequenceNumber);
-}
+    bool param_UseJoinTime;
+};
+
+#endif /* MTREEBONETREESIMPLEPROMOTION_H_ */

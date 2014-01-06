@@ -16,77 +16,37 @@
 #ifndef MTREEBONEPEER_H_
 #define MTREEBONEPEER_H_
 
+#include "CommBase.h"
+#include "GossipListener.h"
 #include "MTreeBoneBase.h"
-#include "PlayerStallSkip.h"
-#include "PlayerBufferSkip.h"
 #include "PlayerListener.h"
 
-class MTreeBonePeer: public MTreeBoneBase, public PlayerListener {
+class MTreeBoneBase;
+
+class MTreeBonePeer : public MTreeBoneBase, public PlayerListener, public VideoBufferListener {
 public:
     MTreeBonePeer();
     virtual ~MTreeBonePeer();
 
-    // VideoBufferListener
-    virtual void onNewChunk(IPvXAddress src, int sequenceNumber, int hopcount);
-    virtual void onDuplicateChunk(IPvXAddress src, int sequenceNumber, int hopcount);
+    virtual PlayerBufferSkip*   getPlayer()         {return m_Player;}
 
-    // PlayerListener:
-    void onPlayerStarted();
+    // PlayerListener
+    virtual void onPlayerStarted();
     virtual void onChunksSkipped(SEQUENCE_NUMBER_T oldposition, SEQUENCE_NUMBER_T newposition);
     virtual void onChunkHit(SEQUENCE_NUMBER_T hit);
     virtual void onChunkMiss(SEQUENCE_NUMBER_T miss);
 
-    PlayerBufferSkip* getPlayer(){return mPlayer;}
-    //PlayerStallSkip* getPlayer(){return mPlayer;}
+    // VideoBufferListener
+    virtual void onNewChunk(IPvXAddress src, int sequenceNumber, int hopcount);
+    virtual void onDuplicateChunk(IPvXAddress src, int sequenceNumber, int hopcount);
 protected:
     virtual int numInitStages() const { return 4; }
     virtual void initialize(int stage);
-    virtual void handleTimerMessage(cMessage *msg);
-    virtual void processPacket(cPacket *pkt);
 
-    void requestParentShip(int stripe, IPvXAddress addr);
-    void removeParent(int stripe);
-private:
-    // timer
-    cMessage* timer_joinNetwork;
-    cMessage* timer_leaveNetwork;
-    cMessage* timer_checkNeighbors;
-    cMessage* timer_chunkScheduler;
+    virtual void onJoinedNetwork();
+    virtual void onLeavedNetwork();
 
-    PlayerBufferSkip* mPlayer;
-    //PlayerStallSkip* mPlayer;
-    // chunk request handling
-    bool param_DisablePush;
-    double param_ChunkScheduleInterval;
-    double param_ChunkRequestTimeout;
-
-    std::map<int, SimTime> m_PendingRequests; // sequence number, timeout
-
-    void checkNeighbors();
-    void checkParents();
-
-    IPvXAddress findBetterParent(int stripe);
-    IPvXAddress findSwapCandidate(int stripe);
-
-    bool wantToBeBoneNode(int stripe); // simple method to disable the usage of push/parents};
-
-    void handleParentRequestResponse(IPvXAddress src, MTreeBoneParentRequestResponsePacket* resp);
-
-    void handleSwitchPositionRequest(IPvXAddress src, MTreeBonePeerSwitchPostionRequestPacket* resp);
-    void handleSwitchPositionResponse(IPvXAddress src, MTreeBonePeerSwitchPostionRequestResponsePacket* resp);
-
-    virtual void doChunkSchedule();
-    virtual void doChunkSchedule(unsigned int stripe);
-
-    int getNumberOfPeersWithChunk(int stripe, int chunk);
-    IPvXAddress getFirstPeerWithChunk(int stripe, int chunk);
-
-    bool requestIsPending(unsigned int sequenceNumber);
-    void removePendingRequest(unsigned int sequenceNumber);
-
-    long m_ChunksReceived;
-public:
-    long getChunksReceived(){return m_ChunksReceived;}
+    PlayerBufferSkip* m_Player;
 };
 
 #endif /* MTREEBONEPEER_H_ */

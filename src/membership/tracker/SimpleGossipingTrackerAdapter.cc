@@ -106,3 +106,9 @@ void SimpleGossipingTrackerAdapter::triggerGossipDataReceived(){
         (*iter)->onGossipDataReceived();
     }
 }
+
+int SimpleGossipingTrackerAdapter::requestUpdate(){
+    GossipingTracker::theTracker->shufflePeersKnownPeers( this );
+
+    return 0;
+}

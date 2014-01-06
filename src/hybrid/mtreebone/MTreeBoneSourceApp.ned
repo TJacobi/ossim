@@ -23,8 +23,7 @@ module MTreeBoneSourceApp
         output udpOut;
 
     submodules:
-        //membership: ScampPeer {
-        mesh: MTreeBoneSource {
+        source: MTreeBoneSource {
             @display("p=133,179;i=block/network2");
         }
         forwarder: Forwarder {
@@ -44,15 +43,12 @@ module MTreeBoneSourceApp
             @display("p=133,110");
         }
         
-		//dummy1: DummyMembership {
-        //    @display("p=51,173;i=block/users");
-        //}
-		dummy2: DummyMembership {
-            @display("p=51,173;i=block/users");
-        }
-        
+      
         //gossipProtocol : NewscastPeer;
         gossipProtocol : SimpleGossipingTrackerAdapter;
+        
+        meshmodule : MTreeBoneMesh;
+        treemodule : MTreeBoneTree;
         
         dispatcher: Dispatcher {
             @display("p=133,253;i=block/dispatch");
@@ -66,21 +62,21 @@ module MTreeBoneSourceApp
         dispatcher.overlayOut++ --> gossipProtocol.dpIn;
         
         // Connect Mesh module to the Dispatcher
-        dispatcher.overlayIn++ <-- mesh.dpOut;
-        dispatcher.overlayOut++ --> mesh.dpIn;
+        dispatcher.overlayIn++ <-- meshmodule.dpOut;
+        dispatcher.overlayOut++ --> meshmodule.dpIn;
 
         // Connect Forwarder module to the Dispatcher
         dispatcher.overlayIn++ <-- forwarder.dpOut;
         dispatcher.overlayOut++ --> forwarder.dpIn;
 
         // Connect tree module to the Dispatcher
-        dispatcher.overlayIn++ <-- dummy2.dpOut;
-        dispatcher.overlayOut++ --> dummy2.dpIn;
+        dispatcher.overlayIn++ <-- treemodule.dpOut;
+        dispatcher.overlayOut++ --> treemodule.dpIn;
         
-        // Connect hybrid module to the Dispatcher
-        //dispatcher.overlayIn++ <-- mesh.dpOut;
-        //dispatcher.overlayOut++ --> mesh.dpIn;
-        
+        // Connect source module to the Dispatcher
+        dispatcher.overlayIn++ <-- source.dpOut;
+        dispatcher.overlayOut++ --> source.dpIn;
+
         // Connect Dispatcher to module's ports
         dispatcher.udpIn <-- udpIn;
         dispatcher.udpOut --> udpOut;
