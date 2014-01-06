@@ -120,7 +120,7 @@ void MTreeBoneTree::timerCheckNeighbors(){
         if (!m_Base->wantToBeBoneNode(stripe)) // we dont want to be a bone node?
             continue;
 
-        if (pStripe->isBoneNode() && (parentTimeout < simTime()) ){
+        if (pStripe->isBoneNode() && (parentTimeout > simTime()) ){
 
             IPvXAddress SwapCandidate = findSwapCandidate(stripe);
 
@@ -146,6 +146,9 @@ void MTreeBoneTree::timerCheckNeighbors(){
                 while (pStripe->Children.size() > 0)
                     removeChild(stripe, pStripe->Children.at(0));
 
+            if (m_Base->debugOutput)
+                m_Base->m_outFileDebug << simTime().str() << " [PARENT_REQUEST] timedout: " << (parentTimeout < simTime()) << endl;
+                //(parentTimeout < simTime())
             for (unsigned int i = 0; i < pStripe->Neighbors.size(); i++){
                 int rnd = (int)intrand(pStripe->Neighbors.size());
                 addr = pStripe->Neighbors.at(rnd);
@@ -514,7 +517,7 @@ IPvXAddress MTreeBoneTree::findSwapCandidate(int stripe){
         if (info == NULL) continue;
 
         if (    (info->getDistance(stripe) < currentDistance) &&
-                (info->getDistance(stripe) >= 0) &&
+                (info->getDistance(stripe) > 0) &&
                 (info->getNumChildren(stripe) < m_Base->getReportedNumChildren(stripe) )// pStripe->Children.size())
                 //(info->getSequenceNumberEnd() > mPlayer->getCurrentPlaybackPoint() + m_ChunksPerSecond) // shouldnt be important because we swap higher into the tree
            )
@@ -532,13 +535,13 @@ IPvXAddress MTreeBoneTree::findSwapCandidate(int stripe){
         if (userData == NULL) continue;
 
         MTreeBoneGossipData* data = check_and_cast<MTreeBoneGossipData*> (userData);
-        if ( (!data->getIsBoneNode(stripe)) || (data->getDistance(stripe) >= currentDistance) || (data->getDistance(stripe) < 0) || (data->getNumChildren(stripe) >= m_Base->getReportedNumChildren(stripe)) ){// pStripe->Children.size())){
+        if ( (!data->getIsBoneNode(stripe)) || (data->getDistance(stripe) >= currentDistance) || (data->getDistance(stripe) <= 0) || (data->getNumChildren(stripe) >= m_Base->getReportedNumChildren(stripe)) ){// pStripe->Children.size())){
             delete userData;
             continue;
         }
 
         if (m_Base->debugOutput)
-            m_Base->m_outFileDebug << simTime().str() << " [SWAPSELECTION]findSwapCandidate_a new best: " << (*it).str() << " distance " << info->getDistance(stripe) << endl;
+            m_Base->m_outFileDebug << simTime().str() << " [SWAPSELECTION]findSwapCandidate_b new best: " << (*it).str() << " distance " << info->getDistance(stripe) << endl;
 
         bestCandidate = (*it);
         currentDistance = info->getDistance(stripe);

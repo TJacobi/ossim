@@ -76,6 +76,7 @@ bool MTreeBoneTreeSimplePromotion::isEligibleForPromotion(MTreeBonePeerInformati
     simtime_t stayedfor = simTime() - info->getJoinTime();
     if (!param_UseJoinTime)
         stayedfor = simTime() - info->getFirstSeenTime();
+    m_Base->m_outFileDebug << simTime() << "MTreeBoneTreeSimplePromotion::isEligibleForPromotion: using time " << stayedfor.str() << " join time: " << info->getJoinTime() << " first seen: " << info->getFirstSeenTime() << " param: " << param_UseJoinTime << endl;
     simtime_t remaining = remaining.parse(ev.getConfig()->getConfigValue("sim-time-limit")) - simTime();//*2 for testing
 
 
